@@ -226,10 +226,14 @@ Remove a socket/fd from the poller.
 
 ## poll(timeout)
 
-Wait `timeout` microseconds for events on the registered sockets (timeout = -1, means
+Wait `timeout` milliseconds [1] for events on the registered sockets (timeout = -1, means
 wait indefinitely).  If any events happen, then those events are dispatched.
 
-	poller:poll(1000000) -- wait 1 second for events.
+	poller:poll(1000) -- wait 1 second for events.
+
+[1] For zmq 2.x `timeout` is in microseconds.  For versions 3.x or higher `timeout` will be in milliseconds.
+
+	poller:poll(1000 * zmq.POLL_MSEC) -- backwards/forwards compatible
 
 ## start()
 
