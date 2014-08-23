@@ -54,4 +54,7 @@ local latency = elapsed / roundtrip_count / 2
 print(string.format("message size: %i [B]", message_size))
 print(string.format("roundtrip count: %i", roundtrip_count))
 print(string.format("mean latency: %.3f [us]", latency))
+local secs = elapsed / (1000 * 1000)
+print(string.format("Elapsed: %f secs", secs))
+print(string.format("throughput %f msg/secs", roundtrip_count / secs))
 
