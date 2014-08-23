@@ -753,8 +753,6 @@ local tmp_msg = ffi.new('zmq_msg_t')
 		C.zmq_msg_close(msg)
 		return data
 	end
-]],
-		ffi_source "ffi_post" [[
 	-- close message
 	C.zmq_msg_close(msg)
 ]],
