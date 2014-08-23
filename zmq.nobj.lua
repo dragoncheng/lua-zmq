@@ -45,6 +45,7 @@ c_source "typedefs" [[
 #define VERSION_2_2 0
 #define VERSION_3_0 0
 #define VERSION_3_2 0
+#define VERSION_4_0 0
 #if defined(ZMQ_VERSION_MAJOR)
 #  if (ZMQ_VERSION_MAJOR == 2) && (ZMQ_VERSION_MINOR == 2)
 #    undef VERSION_2_2
@@ -78,6 +79,16 @@ c_source "typedefs" [[
 #    undef VERSION_3_0
 #    define VERSION_3_0 1
 #  endif
+#  if (ZMQ_VERSION_MAJOR == 4)
+#    undef VERSION_2_0
+#    define VERSION_2_0 0
+#    undef VERSION_3_2
+#    define VERSION_3_2 0
+#    undef VERSION_3_0
+#    define VERSION_3_0 0
+#    undef VERSION_4_0
+#    define VERSION_4_0 1
+#  endif
 #endif
 
 /* make sure ZMQ_DONTWAIT & ZMQ_NOBLOCK are both defined. */
@@ -104,7 +115,7 @@ c_source "typedefs" [[
 
 #if VERSION_2_0
 #  define ZMQ_POLL_MSEC    1000 // zmq_poll is usec
-#elif VERSION_3_0
+#elif VERSION_3_0 || VERSION_4_0
 #  define ZMQ_POLL_MSEC    1    // zmq_poll is msec
 #  ifndef ZMQ_HWM
 #    define ZMQ_HWM        1    // backwards compatibility
@@ -119,7 +130,7 @@ export_definitions {
 MAX_VSM_SIZE      = "ZMQ_MAX_VSM_SIZE",
 
 -- context settings
-MAX_SOCKETS	  = "ZMQ_MAX_SOCKETS",
+MAX_SOCKETS	      = "ZMQ_MAX_SOCKETS",
 IO_THREADS        = "ZMQ_IO_THREADS",
 
 -- message types
@@ -176,12 +187,41 @@ MULTICAST_HOPS    = "ZMQ_MULTICAST_HOPS",
 RCVTIMEO          = "ZMQ_RCVTIMEO",
 SNDTIMEO          = "ZMQ_SNDTIMEO",
 RCVLABEL          = "ZMQ_RCVLABEL",
+LAST_ENDPOINT     = "ZMQ_LAST_ENDPOINT",
+ROUTER_MANDATORY  = "ZMQ_ROUTER_MANDATORY",
+TCP_KEEPALIVE     = "ZMQ_TCP_KEEPALIVE",
+TCP_KEEPALIVE_CNT = "ZMQ_TCP_KEEPALIVE_CNT",
+TCP_KEEPALIVE_IDLE= "ZMQ_TCP_KEEPALIVE_IDLE",
+TCP_KEEPALIVE_INTVL= "ZMQ_TCP_KEEPALIVE_INTVL",
+TCP_ACCEPT_FILTER = "ZMQ_TCP_ACCEPT_FILTER",
+IMMEDIATE         = "ZMQ_IMMEDIATE",
+XPUB_VERBOSE      = "ZMQ_XPUB_VERBOSE",
+ROUTER_RAW        = "ZMQ_ROUTER_RAW",
+IPV6              = "ZMQ_IPV6",
+MECHANISM         = "ZMQ_MECHANISM",
+PLAIN_SERVER      = "ZMQ_PLAIN_SERVER",
+PLAIN_USERNAME    = "ZMQ_PLAIN_USERNAME",
+PLAIN_PASSWORD    = "ZMQ_PLAIN_PASSWORD",
+CURVE_SERVER      = "ZMQ_CURVE_SERVER",
+CURVE_PUBLICKEY   = "ZMQ_CURVE_PUBLICKEY",
+CURVE_SECRETKEY   = "ZMQ_CURVE_SECRETKEY",
+CURVE_SERVERKEY   = "ZMQ_CURVE_SERVERKEY",
+PROBE_ROUTER      = "ZMQ_PROBE_ROUTER",
+REQ_CORRELATE     = "ZMQ_REQ_CORRELATE",
+REQ_RELAXED       = "ZMQ_REQ_RELAXED",
+CONFLATE          = "ZMQ_CONFLATE",
+ZAP_DOMAIN        = "ZMQ_ZAP_DOMAIN",
 
 -- send/recv flags
 NOBLOCK           = "ZMQ_NOBLOCK",
 DONTWAIT          = "ZMQ_DONTWAIT",
 SNDMORE           = "ZMQ_SNDMORE",
 SNDLABEL          = "ZMQ_SNDLABEL",
+
+-- Security mechanisms
+NULL              = "ZMQ_NULL",
+PLAIN             = "ZMQ_PLAIN",
+CURVE             = "ZMQ_CURVE",
 
 -- poll events
 POLLIN            = "ZMQ_POLLIN",
@@ -191,12 +231,29 @@ POLLERR           = "ZMQ_POLLERR",
 -- poll milliseconds.
 POLL_MSEC         = "ZMQ_POLL_MSEC",
 
+-- Socket Monitor events.
+EVENT_CONNECTED   = "ZMQ_EVENT_CONNECTED",
+EVENT_CONNECT_DELAYED = "ZMQ_EVENT_CONNECT_DELAYED",
+EVENT_CONNECT_RETRIED = "ZMQ_EVENT_CONNECT_RETRIED",
+
+EVENT_LISTENING   = "ZMQ_EVENT_LISTENING",
+EVENT_BIND_FAILED = "ZMQ_EVENT_BIND_FAILED",
+
+EVENT_ACCEPTED    = "ZMQ_EVENT_ACCEPTED",
+EVENT_ACCEPT_FAILED= "ZMQ_EVENT_ACCEPT_FAILED",
+
+EVENT_CLOSED      = "ZMQ_EVENT_CLOSED",
+EVENT_CLOSE_FAILED= "ZMQ_EVENT_CLOSE_FAILED",
+EVENT_DISCONNECTED= "ZMQ_EVENT_DISCONNECTED",
+EVENT_MONITOR_STOPPED = "ZMQ_EVENT_MONITOR_STOPPED",
+
+EVENT_ALL         = "ZMQ_EVENT_ALL",
+
 -- devices
 STREAMER          = "ZMQ_STREAMER",
 FORWARDER         = "ZMQ_FORWARDER",
 QUEUE             = "ZMQ_QUEUE",
 },
-
 
 subfiles {
 "src/error.nobj.lua",
