@@ -281,6 +281,7 @@ typedef struct ffi_export_symbol {
 #define VERSION_2_2 0
 #define VERSION_3_0 0
 #define VERSION_3_2 0
+#define VERSION_4_0 0
 #if defined(ZMQ_VERSION_MAJOR)
 #  if (ZMQ_VERSION_MAJOR == 2) && (ZMQ_VERSION_MINOR == 2)
 #    undef VERSION_2_2
@@ -314,6 +315,16 @@ typedef struct ffi_export_symbol {
 #    undef VERSION_3_0
 #    define VERSION_3_0 1
 #  endif
+#  if (ZMQ_VERSION_MAJOR == 4)
+#    undef VERSION_2_0
+#    define VERSION_2_0 0
+#    undef VERSION_3_2
+#    define VERSION_3_2 0
+#    undef VERSION_3_0
+#    define VERSION_3_0 0
+#    undef VERSION_4_0
+#    define VERSION_4_0 1
+#  endif
 #endif
 
 /* make sure ZMQ_DONTWAIT & ZMQ_NOBLOCK are both defined. */
@@ -340,7 +351,7 @@ typedef struct ffi_export_symbol {
 
 #if VERSION_2_0
 #  define ZMQ_POLL_MSEC    1000 // zmq_poll is usec
-#elif VERSION_3_0
+#elif VERSION_3_0 || VERSION_4_0
 #  define ZMQ_POLL_MSEC    1    // zmq_poll is msec
 #  ifndef ZMQ_HWM
 #    define ZMQ_HWM        1    // backwards compatibility
@@ -1637,7 +1648,7 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "		local dir_sep = p_config:sub(1,1)\n"
 "		local path_sep = p_config:sub(3,3)\n"
 "		local path_mark = p_config:sub(5,5)\n"
-"		local path_match = \"([^\" .. path_sep .. \"]*)\" .. path_sep\n"
+"		local path_match = \"([^\" .. path_sep .. \"]+)\"\n"
 "		-- convert dotted name to directory path.\n"
 "		name = name:gsub('%.', dir_sep)\n"
 "		-- try each path in search path.\n"
@@ -1739,8 +1750,12 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "local VERSION_2_1 = false\n"
 "local VERSION_2_2 = false\n"
 "local VERSION_3_0 = false\n"
+"local VERSION_4_0 = false\n"
 "local zver = _M.version()\n"
 "if zver[1] == 3 then\n"
+"	VERSION_2_0 = false\n"
+"	VERSION_4_0 = true\n"
+"elseif zver[1] == 3 then\n"
 "	VERSION_2_0 = false\n"
 "	VERSION_3_0 = true\n"
 "elseif zver[1] == 2 and zver[2] == 2 then\n"
@@ -1845,6 +1860,18 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "\n"
 "ZMQ_Error zmq_recvmsg(ZMQ_Socket *, zmq_msg_t *, int);\n"
 "\n"
+"ZMQ_Error zmq_socket_monitor(ZMQ_Socket *, const char *, int);\n"
+"\n"
+"typedef struct ZMQ_recv_event {\n"
+"	int        event_id;\n"
+"	int        value;\n"
+"	const char *addr;\n"
+"	size_t     addr_len;\n"
+"	const char *err;\n"
+"} ZMQ_recv_event;\n"
+"\n"
+"int monitor_recv_event(ZMQ_Socket *s, zmq_msg_t *msg, int flags, ZMQ_recv_event *ev);\n"
+"\n"
 "ZMQ_Error lzmq_socket_hwm(ZMQ_Socket *, int*);\n"
 "\n"
 "ZMQ_Error lzmq_socket_set_hwm(ZMQ_Socket *, int);\n"
@@ -1940,6 +1967,84 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "ZMQ_Error lzmq_socket_ipv4only(ZMQ_Socket *, int*);\n"
 "\n"
 "ZMQ_Error lzmq_socket_set_ipv4only(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_last_endpoint(ZMQ_Socket *, char *, size_t*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_router_mandatory(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_tcp_keepalive(ZMQ_Socket *, int*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_tcp_keepalive(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_tcp_keepalive_cnt(ZMQ_Socket *, int*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_tcp_keepalive_cnt(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_tcp_keepalive_idle(ZMQ_Socket *, int*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_tcp_keepalive_idle(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_tcp_keepalive_intvl(ZMQ_Socket *, int*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_tcp_keepalive_intvl(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_tcp_accept_filter(ZMQ_Socket *, const char *, size_t);\n"
+"\n"
+"ZMQ_Error lzmq_socket_immediate(ZMQ_Socket *, int*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_immediate(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_xpub_verbose(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_router_raw(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_ipv6(ZMQ_Socket *, int*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_ipv6(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_mechanism(ZMQ_Socket *, int*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_plain_server(ZMQ_Socket *, int*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_plain_server(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_plain_username(ZMQ_Socket *, char *, size_t*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_plain_username(ZMQ_Socket *, const char *, size_t);\n"
+"\n"
+"ZMQ_Error lzmq_socket_plain_password(ZMQ_Socket *, char *, size_t*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_plain_password(ZMQ_Socket *, const char *, size_t);\n"
+"\n"
+"ZMQ_Error lzmq_socket_curve_server(ZMQ_Socket *, int*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_curve_server(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_curve_publickey(ZMQ_Socket *, char *, size_t*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_curve_publickey(ZMQ_Socket *, const char *, size_t);\n"
+"\n"
+"ZMQ_Error lzmq_socket_curve_secretkey(ZMQ_Socket *, char *, size_t*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_curve_secretkey(ZMQ_Socket *, const char *, size_t);\n"
+"\n"
+"ZMQ_Error lzmq_socket_curve_serverkey(ZMQ_Socket *, char *, size_t*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_curve_serverkey(ZMQ_Socket *, const char *, size_t);\n"
+"\n"
+"ZMQ_Error lzmq_socket_probe_router(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_req_correlate(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_req_relaxed(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_conflate(ZMQ_Socket *, int*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_conflate(ZMQ_Socket *, int);\n"
+"\n"
+"ZMQ_Error lzmq_socket_zap_domain(ZMQ_Socket *, char *, size_t*);\n"
+"\n"
+"ZMQ_Error lzmq_socket_set_zap_domain(ZMQ_Socket *, const char *, size_t);\n"
 "\n"
 "typedef int socket_t;\n"
 "typedef struct zmq_pollitem_t {\n"
@@ -2046,7 +2151,7 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "--\n"
 "local _obj_interfaces_key = \"obj_interfaces<1.0>_table_key\"\n"
 "local _obj_interfaces_ud = reg_table[_obj_interfaces_key]\n"
-"local _obj_interfaces_key_ffi = _obj_interfaces_key .. \"_LJ2_FFI\"\n"
+"local _obj_interfaces_key_ffi = _obj_interfaces_key .. \"_LJ2_FFI\"\n", /* ----- CUT ----- */
 "_obj_interfaces_ffi = reg_table[_obj_interfaces_key_ffi]\n"
 "if not _obj_interfaces_ffi then\n"
 "	-- create missing interfaces table for FFI bindings.\n"
@@ -2151,7 +2256,7 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "	_priv[obj_type] = c_check\n"
 "	-- push function for C API.\n"
 "	reg_table[obj_type] = function(ptr)\n"
-"		local obj = obj_ctype()\n", /* ----- CUT ----- */
+"		local obj = obj_ctype()\n"
 "		ffi.copy(obj, ptr, zmq_msg_t_sizeof);\n"
 "		return obj\n"
 "	end\n"
@@ -2596,7 +2701,7 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "end\n"
 "\n"
 "-- zmq_msg_t implements MutableBuffer interface\n"
-"do\n"
+"do\n", /* ----- CUT ----- */
 "  local impl_meths = obj_register_interface(\"MutableBufferIF\", \"zmq_msg_t\")\n"
 "-- MutableBuffer interface method data\n"
 "impl_meths.data = C.zmq_msg_data\n"
@@ -2706,7 +2811,7 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "		[4] = 'affinity',\n"
 "		[5] = 'identity',\n"
 "		[6] = 'subscribe',\n"
-"		[7] = 'unsubscribe',\n", /* ----- CUT ----- */
+"		[7] = 'unsubscribe',\n"
 "		[8] = 'rate',\n"
 "		[9] = 'recovery_ivl',\n"
 "		[10] = 'mcast_loop',\n"
@@ -2728,6 +2833,30 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "		[24] = 'rcvhwm',\n"
 "		[25] = 'multicast_hops',\n"
 "		[31] = 'ipv4only',\n"
+"		[32] = 'last_endpoint',\n"
+"		[33] = 'router_mandatory',\n"
+"		[34] = 'tcp_keepalive',\n"
+"		[35] = 'tcp_keepalive_cnt',\n"
+"		[36] = 'tcp_keepalive_idle',\n"
+"		[37] = 'tcp_keepalive_intvl',\n"
+"		[38] = 'tcp_accept_filter',\n"
+"		[39] = 'immediate',\n"
+"		[40] = 'xpub_verbose',\n"
+"		[41] = 'router_raw',\n"
+"		[42] = 'ipv6',\n"
+"		[43] = 'mechanism',\n"
+"		[44] = 'plain_server',\n"
+"		[45] = 'plain_username',\n"
+"		[46] = 'plain_password',\n"
+"		[47] = 'curve_server',\n"
+"		[48] = 'curve_publickey',\n"
+"		[49] = 'curve_secretkey',\n"
+"		[50] = 'curve_serverkey',\n"
+"		[51] = 'probe_router',\n"
+"		[52] = 'req_correlate',\n"
+"		[53] = 'req_relaxed',\n"
+"		[54] = 'conflate',\n"
+"		[55] = 'zap_domain',\n"
 "}\n"
 "end\n"
 "\n"
@@ -2834,14 +2963,73 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "		C.zmq_msg_close(msg)\n"
 "		return data\n"
 "	end\n"
+"	-- close message\n"
+"	C.zmq_msg_close(msg)\n"
 "\n"
 "  if (-1 == err2) then\n"
 "    return nil,error_code__ZMQ_Error__push(err2)\n"
 "  end\n"
+"  return data1 ~= nil and ffi_string(data1,data_len1) or nil\n"
+"end\n"
+"\n"
+"-- method: monitor\n"
+"if (_meth.ZMQ_Socket.monitor) then\n"
+"function _meth.ZMQ_Socket.monitor(self, addr2, events3)\n"
+"  \n"
+"  local addr_len2 = #addr2\n"
+"  \n"
+"  local rc_zmq_socket_monitor1 = 0\n"
+"  rc_zmq_socket_monitor1 = C.zmq_socket_monitor(self, addr2, events3)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_zmq_socket_monitor1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_zmq_socket_monitor1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"local tmp_recv_event = ffi.new('ZMQ_recv_event')\n"
+"\n"
+"-- method: recv_event\n"
+"if (_meth.ZMQ_Socket.recv_event) then\n"
+"function _meth.ZMQ_Socket.recv_event(self, flags2)\n"
+"  \n"
+"  flags2 = flags2 or 0\n"
+"  local event_id1 = 0\n"
+"  local value2 = 0\n"
+"  local addr_len3 = 0\n"
+"  local addr3\n"
+"  local err4 = 0\n"
+"	local msg = tmp_msg\n"
+"	local event = tmp_recv_event\n"
+"	local addr\n"
+"\n"
+"	-- receive monitor event\n"
+"	err4 = Cmod.monitor_recv_event(self, msg, flags2, event)\n"
+"	if err4 >= 0 then\n"
+"		addr = ffi.string(event.addr, event.addr_len)\n"
+"		-- close message\n"
+"		C.zmq_msg_close(msg)\n"
+"		return event.event_id, event.value, addr\n"
+"	end\n"
 "	-- close message\n"
 "	C.zmq_msg_close(msg)\n"
+"	if event.err ~= nil then\n"
+"		-- error parsing monitor event.\n"
+"		return nil, ffi.string(event.err)\n"
+"	end\n"
 "\n"
-"  return data1 ~= nil and ffi_string(data1,data_len1) or nil\n"
+"  if (-1 == err4) then\n"
+"    return nil,error_code__ZMQ_Error__push(err4)\n"
+"  end\n"
+"  if (-1 == err4) then\n"
+"    return nil,error_code__ZMQ_Error__push(err4)\n"
+"  end\n"
+"  if (-1 == err4) then\n"
+"    return nil,error_code__ZMQ_Error__push(err4)\n"
+"  end\n"
+"  return event_id1, value2, addr3 ~= nil and ffi_string(addr3,addr_len3) or nil\n"
+"end\n"
 "end\n"
 "\n"
 "do\n"
@@ -3089,7 +3277,7 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "  local value1\n"
 "  local rc_lzmq_socket_mcast_loop2 = 0\n"
 "  rc_lzmq_socket_mcast_loop2 = Cmod.lzmq_socket_mcast_loop(self, mcast_loop_value_tmp)\n"
-"  value1 = mcast_loop_value_tmp[0]\n"
+"  value1 = mcast_loop_value_tmp[0]\n", /* ----- CUT ----- */
 "  if (-1 == rc_lzmq_socket_mcast_loop2) then\n"
 "    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_mcast_loop2)\n"
 "  end\n"
@@ -3290,7 +3478,7 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "  return true\n"
 "end\n"
 "end\n"
-"\n", /* ----- CUT ----- */
+"\n"
 "do\n"
 "  local reconnect_ivl_value_tmp = ffi.new(\"int[1]\")\n"
 "\n"
@@ -3635,7 +3823,7 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "  local ipv4only_value_tmp = ffi.new(\"int[1]\")\n"
 "\n"
 "-- method: ipv4only\n"
-"if (_meth.ZMQ_Socket.ipv4only) then\n"
+"if (_meth.ZMQ_Socket.ipv4only) then\n", /* ----- CUT ----- */
 "function _meth.ZMQ_Socket.ipv4only(self)\n"
 "  \n"
 "  local value1\n"
@@ -3660,6 +3848,666 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "  -- check for error.\n"
 "  if (-1 == rc_lzmq_socket_set_ipv4only1) then\n"
 "    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_ipv4only1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local last_endpoint_value_len_tmp = ffi.new(\"size_t[1]\")\n"
+"\n"
+"-- method: last_endpoint\n"
+"if (_meth.ZMQ_Socket.last_endpoint) then\n"
+"function _meth.ZMQ_Socket.last_endpoint(self)\n"
+"  \n"
+"  local value_len1 = 0\n"
+"  local value1\n"
+"  local rc_lzmq_socket_last_endpoint2 = 0\n"
+"  rc_lzmq_socket_last_endpoint2 = Cmod.lzmq_socket_last_endpoint(self, value1, last_endpoint_value_len_tmp)\n"
+"  value_len1 = last_endpoint_value_len_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_last_endpoint2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_last_endpoint2)\n"
+"  end\n"
+"  return value1 ~= nil and ffi_string(value1,value_len1) or nil\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: router_mandatory\n"
+"if (_meth.ZMQ_Socket.router_mandatory) then\n"
+"function _meth.ZMQ_Socket.router_mandatory(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_router_mandatory1 = 0\n"
+"  rc_lzmq_socket_router_mandatory1 = Cmod.lzmq_socket_router_mandatory(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_router_mandatory1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_router_mandatory1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local tcp_keepalive_value_tmp = ffi.new(\"int[1]\")\n"
+"\n"
+"-- method: tcp_keepalive\n"
+"if (_meth.ZMQ_Socket.tcp_keepalive) then\n"
+"function _meth.ZMQ_Socket.tcp_keepalive(self)\n"
+"  \n"
+"  local value1\n"
+"  local rc_lzmq_socket_tcp_keepalive2 = 0\n"
+"  rc_lzmq_socket_tcp_keepalive2 = Cmod.lzmq_socket_tcp_keepalive(self, tcp_keepalive_value_tmp)\n"
+"  value1 = tcp_keepalive_value_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_tcp_keepalive2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_tcp_keepalive2)\n"
+"  end\n"
+"  return value1\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_tcp_keepalive\n"
+"if (_meth.ZMQ_Socket.set_tcp_keepalive) then\n"
+"function _meth.ZMQ_Socket.set_tcp_keepalive(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_set_tcp_keepalive1 = 0\n"
+"  rc_lzmq_socket_set_tcp_keepalive1 = Cmod.lzmq_socket_set_tcp_keepalive(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_tcp_keepalive1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_tcp_keepalive1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local tcp_keepalive_cnt_value_tmp = ffi.new(\"int[1]\")\n"
+"\n"
+"-- method: tcp_keepalive_cnt\n"
+"if (_meth.ZMQ_Socket.tcp_keepalive_cnt) then\n"
+"function _meth.ZMQ_Socket.tcp_keepalive_cnt(self)\n"
+"  \n"
+"  local value1\n"
+"  local rc_lzmq_socket_tcp_keepalive_cnt2 = 0\n"
+"  rc_lzmq_socket_tcp_keepalive_cnt2 = Cmod.lzmq_socket_tcp_keepalive_cnt(self, tcp_keepalive_cnt_value_tmp)\n"
+"  value1 = tcp_keepalive_cnt_value_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_tcp_keepalive_cnt2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_tcp_keepalive_cnt2)\n"
+"  end\n"
+"  return value1\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_tcp_keepalive_cnt\n"
+"if (_meth.ZMQ_Socket.set_tcp_keepalive_cnt) then\n"
+"function _meth.ZMQ_Socket.set_tcp_keepalive_cnt(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_set_tcp_keepalive_cnt1 = 0\n"
+"  rc_lzmq_socket_set_tcp_keepalive_cnt1 = Cmod.lzmq_socket_set_tcp_keepalive_cnt(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_tcp_keepalive_cnt1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_tcp_keepalive_cnt1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local tcp_keepalive_idle_value_tmp = ffi.new(\"int[1]\")\n"
+"\n"
+"-- method: tcp_keepalive_idle\n"
+"if (_meth.ZMQ_Socket.tcp_keepalive_idle) then\n"
+"function _meth.ZMQ_Socket.tcp_keepalive_idle(self)\n"
+"  \n"
+"  local value1\n"
+"  local rc_lzmq_socket_tcp_keepalive_idle2 = 0\n"
+"  rc_lzmq_socket_tcp_keepalive_idle2 = Cmod.lzmq_socket_tcp_keepalive_idle(self, tcp_keepalive_idle_value_tmp)\n"
+"  value1 = tcp_keepalive_idle_value_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_tcp_keepalive_idle2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_tcp_keepalive_idle2)\n"
+"  end\n"
+"  return value1\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_tcp_keepalive_idle\n"
+"if (_meth.ZMQ_Socket.set_tcp_keepalive_idle) then\n"
+"function _meth.ZMQ_Socket.set_tcp_keepalive_idle(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_set_tcp_keepalive_idle1 = 0\n"
+"  rc_lzmq_socket_set_tcp_keepalive_idle1 = Cmod.lzmq_socket_set_tcp_keepalive_idle(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_tcp_keepalive_idle1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_tcp_keepalive_idle1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local tcp_keepalive_intvl_value_tmp = ffi.new(\"int[1]\")\n"
+"\n"
+"-- method: tcp_keepalive_intvl\n"
+"if (_meth.ZMQ_Socket.tcp_keepalive_intvl) then\n"
+"function _meth.ZMQ_Socket.tcp_keepalive_intvl(self)\n"
+"  \n"
+"  local value1\n"
+"  local rc_lzmq_socket_tcp_keepalive_intvl2 = 0\n"
+"  rc_lzmq_socket_tcp_keepalive_intvl2 = Cmod.lzmq_socket_tcp_keepalive_intvl(self, tcp_keepalive_intvl_value_tmp)\n"
+"  value1 = tcp_keepalive_intvl_value_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_tcp_keepalive_intvl2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_tcp_keepalive_intvl2)\n"
+"  end\n"
+"  return value1\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_tcp_keepalive_intvl\n"
+"if (_meth.ZMQ_Socket.set_tcp_keepalive_intvl) then\n"
+"function _meth.ZMQ_Socket.set_tcp_keepalive_intvl(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_set_tcp_keepalive_intvl1 = 0\n"
+"  rc_lzmq_socket_set_tcp_keepalive_intvl1 = Cmod.lzmq_socket_set_tcp_keepalive_intvl(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_tcp_keepalive_intvl1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_tcp_keepalive_intvl1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: tcp_accept_filter\n"
+"if (_meth.ZMQ_Socket.tcp_accept_filter) then\n"
+"function _meth.ZMQ_Socket.tcp_accept_filter(self, value2)\n"
+"  \n"
+"  local value_len2 = #value2\n"
+"  local rc_lzmq_socket_tcp_accept_filter1 = 0\n"
+"  rc_lzmq_socket_tcp_accept_filter1 = Cmod.lzmq_socket_tcp_accept_filter(self, value2, value_len2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_tcp_accept_filter1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_tcp_accept_filter1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local immediate_value_tmp = ffi.new(\"int[1]\")\n"
+"\n"
+"-- method: immediate\n"
+"if (_meth.ZMQ_Socket.immediate) then\n"
+"function _meth.ZMQ_Socket.immediate(self)\n"
+"  \n"
+"  local value1\n"
+"  local rc_lzmq_socket_immediate2 = 0\n"
+"  rc_lzmq_socket_immediate2 = Cmod.lzmq_socket_immediate(self, immediate_value_tmp)\n"
+"  value1 = immediate_value_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_immediate2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_immediate2)\n"
+"  end\n"
+"  return value1\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_immediate\n"
+"if (_meth.ZMQ_Socket.set_immediate) then\n"
+"function _meth.ZMQ_Socket.set_immediate(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_set_immediate1 = 0\n"
+"  rc_lzmq_socket_set_immediate1 = Cmod.lzmq_socket_set_immediate(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_immediate1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_immediate1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: xpub_verbose\n"
+"if (_meth.ZMQ_Socket.xpub_verbose) then\n"
+"function _meth.ZMQ_Socket.xpub_verbose(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_xpub_verbose1 = 0\n"
+"  rc_lzmq_socket_xpub_verbose1 = Cmod.lzmq_socket_xpub_verbose(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_xpub_verbose1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_xpub_verbose1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: router_raw\n"
+"if (_meth.ZMQ_Socket.router_raw) then\n"
+"function _meth.ZMQ_Socket.router_raw(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_router_raw1 = 0\n"
+"  rc_lzmq_socket_router_raw1 = Cmod.lzmq_socket_router_raw(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_router_raw1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_router_raw1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local ipv6_value_tmp = ffi.new(\"int[1]\")\n"
+"\n"
+"-- method: ipv6\n"
+"if (_meth.ZMQ_Socket.ipv6) then\n"
+"function _meth.ZMQ_Socket.ipv6(self)\n"
+"  \n"
+"  local value1\n"
+"  local rc_lzmq_socket_ipv62 = 0\n"
+"  rc_lzmq_socket_ipv62 = Cmod.lzmq_socket_ipv6(self, ipv6_value_tmp)\n"
+"  value1 = ipv6_value_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_ipv62) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_ipv62)\n"
+"  end\n"
+"  return value1\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_ipv6\n"
+"if (_meth.ZMQ_Socket.set_ipv6) then\n"
+"function _meth.ZMQ_Socket.set_ipv6(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_set_ipv61 = 0\n"
+"  rc_lzmq_socket_set_ipv61 = Cmod.lzmq_socket_set_ipv6(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_ipv61) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_ipv61)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local mechanism_value_tmp = ffi.new(\"int[1]\")\n"
+"\n"
+"-- method: mechanism\n"
+"if (_meth.ZMQ_Socket.mechanism) then\n"
+"function _meth.ZMQ_Socket.mechanism(self)\n"
+"  \n"
+"  local value1\n"
+"  local rc_lzmq_socket_mechanism2 = 0\n"
+"  rc_lzmq_socket_mechanism2 = Cmod.lzmq_socket_mechanism(self, mechanism_value_tmp)\n"
+"  value1 = mechanism_value_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_mechanism2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_mechanism2)\n"
+"  end\n"
+"  return value1\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local plain_server_value_tmp = ffi.new(\"int[1]\")\n"
+"\n"
+"-- method: plain_server\n"
+"if (_meth.ZMQ_Socket.plain_server) then\n"
+"function _meth.ZMQ_Socket.plain_server(self)\n"
+"  \n"
+"  local value1\n"
+"  local rc_lzmq_socket_plain_server2 = 0\n"
+"  rc_lzmq_socket_plain_server2 = Cmod.lzmq_socket_plain_server(self, plain_server_value_tmp)\n"
+"  value1 = plain_server_value_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_plain_server2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_plain_server2)\n"
+"  end\n"
+"  return value1\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_plain_server\n"
+"if (_meth.ZMQ_Socket.set_plain_server) then\n"
+"function _meth.ZMQ_Socket.set_plain_server(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_set_plain_server1 = 0\n"
+"  rc_lzmq_socket_set_plain_server1 = Cmod.lzmq_socket_set_plain_server(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_plain_server1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_plain_server1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local plain_username_value_len_tmp = ffi.new(\"size_t[1]\")\n"
+"\n"
+"-- method: plain_username\n"
+"if (_meth.ZMQ_Socket.plain_username) then\n"
+"function _meth.ZMQ_Socket.plain_username(self)\n"
+"  \n"
+"  local value_len1 = 0\n"
+"  local value1\n"
+"  local rc_lzmq_socket_plain_username2 = 0\n"
+"  rc_lzmq_socket_plain_username2 = Cmod.lzmq_socket_plain_username(self, value1, plain_username_value_len_tmp)\n"
+"  value_len1 = plain_username_value_len_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_plain_username2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_plain_username2)\n"
+"  end\n"
+"  return value1 ~= nil and ffi_string(value1,value_len1) or nil\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_plain_username\n"
+"if (_meth.ZMQ_Socket.set_plain_username) then\n"
+"function _meth.ZMQ_Socket.set_plain_username(self, value2)\n"
+"  \n"
+"  local value_len2 = #value2\n"
+"  local rc_lzmq_socket_set_plain_username1 = 0\n"
+"  rc_lzmq_socket_set_plain_username1 = Cmod.lzmq_socket_set_plain_username(self, value2, value_len2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_plain_username1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_plain_username1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local plain_password_value_len_tmp = ffi.new(\"size_t[1]\")\n"
+"\n"
+"-- method: plain_password\n"
+"if (_meth.ZMQ_Socket.plain_password) then\n"
+"function _meth.ZMQ_Socket.plain_password(self)\n"
+"  \n"
+"  local value_len1 = 0\n"
+"  local value1\n"
+"  local rc_lzmq_socket_plain_password2 = 0\n"
+"  rc_lzmq_socket_plain_password2 = Cmod.lzmq_socket_plain_password(self, value1, plain_password_value_len_tmp)\n"
+"  value_len1 = plain_password_value_len_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_plain_password2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_plain_password2)\n"
+"  end\n"
+"  return value1 ~= nil and ffi_string(value1,value_len1) or nil\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_plain_password\n"
+"if (_meth.ZMQ_Socket.set_plain_password) then\n"
+"function _meth.ZMQ_Socket.set_plain_password(self, value2)\n"
+"  \n"
+"  local value_len2 = #value2\n"
+"  local rc_lzmq_socket_set_plain_password1 = 0\n"
+"  rc_lzmq_socket_set_plain_password1 = Cmod.lzmq_socket_set_plain_password(self, value2, value_len2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_plain_password1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_plain_password1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local curve_server_value_tmp = ffi.new(\"int[1]\")\n"
+"\n"
+"-- method: curve_server\n"
+"if (_meth.ZMQ_Socket.curve_server) then\n"
+"function _meth.ZMQ_Socket.curve_server(self)\n"
+"  \n"
+"  local value1\n"
+"  local rc_lzmq_socket_curve_server2 = 0\n"
+"  rc_lzmq_socket_curve_server2 = Cmod.lzmq_socket_curve_server(self, curve_server_value_tmp)\n"
+"  value1 = curve_server_value_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_curve_server2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_curve_server2)\n"
+"  end\n"
+"  return value1\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_curve_server\n"
+"if (_meth.ZMQ_Socket.set_curve_server) then\n"
+"function _meth.ZMQ_Socket.set_curve_server(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_set_curve_server1 = 0\n"
+"  rc_lzmq_socket_set_curve_server1 = Cmod.lzmq_socket_set_curve_server(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_curve_server1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_curve_server1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local curve_publickey_value_len_tmp = ffi.new(\"size_t[1]\")\n"
+"\n"
+"-- method: curve_publickey\n"
+"if (_meth.ZMQ_Socket.curve_publickey) then\n"
+"function _meth.ZMQ_Socket.curve_publickey(self)\n"
+"  \n"
+"  local value_len1 = 0\n"
+"  local value1\n"
+"  local rc_lzmq_socket_curve_publickey2 = 0\n"
+"  rc_lzmq_socket_curve_publickey2 = Cmod.lzmq_socket_curve_publickey(self, value1, curve_publickey_value_len_tmp)\n"
+"  value_len1 = curve_publickey_value_len_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_curve_publickey2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_curve_publickey2)\n"
+"  end\n"
+"  return value1 ~= nil and ffi_string(value1,value_len1) or nil\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_curve_publickey\n"
+"if (_meth.ZMQ_Socket.set_curve_publickey) then\n"
+"function _meth.ZMQ_Socket.set_curve_publickey(self, value2)\n"
+"  \n", /* ----- CUT ----- */
+"  local value_len2 = #value2\n"
+"  local rc_lzmq_socket_set_curve_publickey1 = 0\n"
+"  rc_lzmq_socket_set_curve_publickey1 = Cmod.lzmq_socket_set_curve_publickey(self, value2, value_len2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_curve_publickey1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_curve_publickey1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local curve_secretkey_value_len_tmp = ffi.new(\"size_t[1]\")\n"
+"\n"
+"-- method: curve_secretkey\n"
+"if (_meth.ZMQ_Socket.curve_secretkey) then\n"
+"function _meth.ZMQ_Socket.curve_secretkey(self)\n"
+"  \n"
+"  local value_len1 = 0\n"
+"  local value1\n"
+"  local rc_lzmq_socket_curve_secretkey2 = 0\n"
+"  rc_lzmq_socket_curve_secretkey2 = Cmod.lzmq_socket_curve_secretkey(self, value1, curve_secretkey_value_len_tmp)\n"
+"  value_len1 = curve_secretkey_value_len_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_curve_secretkey2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_curve_secretkey2)\n"
+"  end\n"
+"  return value1 ~= nil and ffi_string(value1,value_len1) or nil\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_curve_secretkey\n"
+"if (_meth.ZMQ_Socket.set_curve_secretkey) then\n"
+"function _meth.ZMQ_Socket.set_curve_secretkey(self, value2)\n"
+"  \n"
+"  local value_len2 = #value2\n"
+"  local rc_lzmq_socket_set_curve_secretkey1 = 0\n"
+"  rc_lzmq_socket_set_curve_secretkey1 = Cmod.lzmq_socket_set_curve_secretkey(self, value2, value_len2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_curve_secretkey1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_curve_secretkey1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local curve_serverkey_value_len_tmp = ffi.new(\"size_t[1]\")\n"
+"\n"
+"-- method: curve_serverkey\n"
+"if (_meth.ZMQ_Socket.curve_serverkey) then\n"
+"function _meth.ZMQ_Socket.curve_serverkey(self)\n"
+"  \n"
+"  local value_len1 = 0\n"
+"  local value1\n"
+"  local rc_lzmq_socket_curve_serverkey2 = 0\n"
+"  rc_lzmq_socket_curve_serverkey2 = Cmod.lzmq_socket_curve_serverkey(self, value1, curve_serverkey_value_len_tmp)\n"
+"  value_len1 = curve_serverkey_value_len_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_curve_serverkey2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_curve_serverkey2)\n"
+"  end\n"
+"  return value1 ~= nil and ffi_string(value1,value_len1) or nil\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_curve_serverkey\n"
+"if (_meth.ZMQ_Socket.set_curve_serverkey) then\n"
+"function _meth.ZMQ_Socket.set_curve_serverkey(self, value2)\n"
+"  \n"
+"  local value_len2 = #value2\n"
+"  local rc_lzmq_socket_set_curve_serverkey1 = 0\n"
+"  rc_lzmq_socket_set_curve_serverkey1 = Cmod.lzmq_socket_set_curve_serverkey(self, value2, value_len2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_curve_serverkey1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_curve_serverkey1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: probe_router\n"
+"if (_meth.ZMQ_Socket.probe_router) then\n"
+"function _meth.ZMQ_Socket.probe_router(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_probe_router1 = 0\n"
+"  rc_lzmq_socket_probe_router1 = Cmod.lzmq_socket_probe_router(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_probe_router1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_probe_router1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: req_correlate\n"
+"if (_meth.ZMQ_Socket.req_correlate) then\n"
+"function _meth.ZMQ_Socket.req_correlate(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_req_correlate1 = 0\n"
+"  rc_lzmq_socket_req_correlate1 = Cmod.lzmq_socket_req_correlate(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_req_correlate1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_req_correlate1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: req_relaxed\n"
+"if (_meth.ZMQ_Socket.req_relaxed) then\n"
+"function _meth.ZMQ_Socket.req_relaxed(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_req_relaxed1 = 0\n"
+"  rc_lzmq_socket_req_relaxed1 = Cmod.lzmq_socket_req_relaxed(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_req_relaxed1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_req_relaxed1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local conflate_value_tmp = ffi.new(\"int[1]\")\n"
+"\n"
+"-- method: conflate\n"
+"if (_meth.ZMQ_Socket.conflate) then\n"
+"function _meth.ZMQ_Socket.conflate(self)\n"
+"  \n"
+"  local value1\n"
+"  local rc_lzmq_socket_conflate2 = 0\n"
+"  rc_lzmq_socket_conflate2 = Cmod.lzmq_socket_conflate(self, conflate_value_tmp)\n"
+"  value1 = conflate_value_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_conflate2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_conflate2)\n"
+"  end\n"
+"  return value1\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_conflate\n"
+"if (_meth.ZMQ_Socket.set_conflate) then\n"
+"function _meth.ZMQ_Socket.set_conflate(self, value2)\n"
+"  \n"
+"  \n"
+"  local rc_lzmq_socket_set_conflate1 = 0\n"
+"  rc_lzmq_socket_set_conflate1 = Cmod.lzmq_socket_set_conflate(self, value2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_conflate1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_conflate1)\n"
+"  end\n"
+"  return true\n"
+"end\n"
+"end\n"
+"\n"
+"do\n"
+"  local zap_domain_value_len_tmp = ffi.new(\"size_t[1]\")\n"
+"\n"
+"-- method: zap_domain\n"
+"if (_meth.ZMQ_Socket.zap_domain) then\n"
+"function _meth.ZMQ_Socket.zap_domain(self)\n"
+"  \n"
+"  local value_len1 = 0\n"
+"  local value1\n"
+"  local rc_lzmq_socket_zap_domain2 = 0\n"
+"  rc_lzmq_socket_zap_domain2 = Cmod.lzmq_socket_zap_domain(self, value1, zap_domain_value_len_tmp)\n"
+"  value_len1 = zap_domain_value_len_tmp[0]\n"
+"  if (-1 == rc_lzmq_socket_zap_domain2) then\n"
+"    return nil,error_code__ZMQ_Error__push(rc_lzmq_socket_zap_domain2)\n"
+"  end\n"
+"  return value1 ~= nil and ffi_string(value1,value_len1) or nil\n"
+"end\n"
+"end\n"
+"end\n"
+"\n"
+"-- method: set_zap_domain\n"
+"if (_meth.ZMQ_Socket.set_zap_domain) then\n"
+"function _meth.ZMQ_Socket.set_zap_domain(self, value2)\n"
+"  \n"
+"  local value_len2 = #value2\n"
+"  local rc_lzmq_socket_set_zap_domain1 = 0\n"
+"  rc_lzmq_socket_set_zap_domain1 = Cmod.lzmq_socket_set_zap_domain(self, value2, value_len2)\n"
+"  -- check for error.\n"
+"  if (-1 == rc_lzmq_socket_set_zap_domain1) then\n"
+"    return nil, error_code__ZMQ_Error__push(rc_lzmq_socket_set_zap_domain1)\n"
 "  end\n"
 "  return true\n"
 "end\n"
@@ -3845,7 +4693,7 @@ static const char *zmq_ffi_lua_code[] = { "local ffi=require\"ffi\"\n"
 "  end\n"
 "  return obj_type_ZMQ_Socket_push(rc_zmq_socket1, rc_zmq_socket_flags1)\n"
 "end\n"
-"\n", /* ----- CUT ----- */
+"\n"
 "-- method: set\n"
 "if (_meth.ZMQ_Ctx.set) then\n"
 "function _meth.ZMQ_Ctx.set(self, flag2, value3)\n"
@@ -4103,7 +4951,67 @@ static const int opt_types[] = {
   OPT_TYPE_NONE,  /* 30 unused */
   OPT_TYPE_INT,  /* 31 ZMQ_IPV4ONLY */
 #endif /* #if VERSION_3_0 */
-#if VERSION_3_0
+#if VERSION_4_0
+#define VERSION_4_0_MAX_OPT 55
+  OPT_TYPE_INT,  /* 1 ZMQ_HWM */
+  OPT_TYPE_NONE,  /* 2 unused */
+  OPT_TYPE_NONE,  /* 3 unused */
+  OPT_TYPE_UINT64,  /* 4 ZMQ_AFFINITY */
+  OPT_TYPE_BLOB,  /* 5 ZMQ_IDENTITY */
+  OPT_TYPE_BLOB,  /* 6 ZMQ_SUBSCRIBE */
+  OPT_TYPE_BLOB,  /* 7 ZMQ_UNSUBSCRIBE */
+  OPT_TYPE_INT,  /* 8 ZMQ_RATE */
+  OPT_TYPE_INT,  /* 9 ZMQ_RECOVERY_IVL */
+  OPT_TYPE_NONE,  /* 10 unused */
+  OPT_TYPE_INT,  /* 11 ZMQ_SNDBUF */
+  OPT_TYPE_INT,  /* 12 ZMQ_RCVBUF */
+  OPT_TYPE_INT,  /* 13 ZMQ_RCVMORE */
+  OPT_TYPE_FD,  /* 14 ZMQ_FD */
+  OPT_TYPE_INT,  /* 15 ZMQ_EVENTS */
+  OPT_TYPE_INT,  /* 16 ZMQ_TYPE */
+  OPT_TYPE_INT,  /* 17 ZMQ_LINGER */
+  OPT_TYPE_INT,  /* 18 ZMQ_RECONNECT_IVL */
+  OPT_TYPE_INT,  /* 19 ZMQ_BACKLOG */
+  OPT_TYPE_NONE,  /* 20 unused */
+  OPT_TYPE_INT,  /* 21 ZMQ_RECONNECT_IVL_MAX */
+  OPT_TYPE_INT64,  /* 22 ZMQ_MAXMSGSIZE */
+  OPT_TYPE_INT,  /* 23 ZMQ_SNDHWM */
+  OPT_TYPE_INT,  /* 24 ZMQ_RCVHWM */
+  OPT_TYPE_INT,  /* 25 ZMQ_MULTICAST_HOPS */
+  OPT_TYPE_NONE,  /* 26 unused */
+  OPT_TYPE_INT,  /* 27 ZMQ_RCVTIMEO */
+  OPT_TYPE_INT,  /* 28 ZMQ_SNDTIMEO */
+  OPT_TYPE_NONE,  /* 29 unused */
+  OPT_TYPE_NONE,  /* 30 unused */
+  OPT_TYPE_INT,  /* 31 ZMQ_IPV4ONLY */
+  OPT_TYPE_BLOB,  /* 32 ZMQ_LAST_ENDPOINT */
+  OPT_TYPE_INT,  /* 33 ZMQ_ROUTER_MANDATORY */
+  OPT_TYPE_INT,  /* 34 ZMQ_TCP_KEEPALIVE */
+  OPT_TYPE_INT,  /* 35 ZMQ_TCP_KEEPALIVE_CNT */
+  OPT_TYPE_INT,  /* 36 ZMQ_TCP_KEEPALIVE_IDLE */
+  OPT_TYPE_INT,  /* 37 ZMQ_TCP_KEEPALIVE_INTVL */
+  OPT_TYPE_BLOB,  /* 38 ZMQ_TCP_ACCEPT_FILTER */
+  OPT_TYPE_INT,  /* 39 ZMQ_IMMEDIATE */
+  OPT_TYPE_INT,  /* 40 ZMQ_XPUB_VERBOSE */
+  OPT_TYPE_INT,  /* 41 ZMQ_ROUTER_RAW */
+  OPT_TYPE_INT,  /* 42 ZMQ_IPV6 */
+  OPT_TYPE_INT,  /* 43 ZMQ_MECHANISM */
+  OPT_TYPE_INT,  /* 44 ZMQ_PLAIN_SERVER */
+  OPT_TYPE_BLOB,  /* 45 ZMQ_PLAIN_USERNAME */
+  OPT_TYPE_BLOB,  /* 46 ZMQ_PLAIN_PASSWORD */
+  OPT_TYPE_INT,  /* 47 ZMQ_CURVE_SERVER */
+  OPT_TYPE_BLOB,  /* 48 ZMQ_CURVE_PUBLICKEY */
+  OPT_TYPE_BLOB,  /* 49 ZMQ_CURVE_SECRETKEY */
+  OPT_TYPE_BLOB,  /* 50 ZMQ_CURVE_SERVERKEY */
+  OPT_TYPE_INT,  /* 51 ZMQ_PROBE_ROUTER */
+  OPT_TYPE_INT,  /* 52 ZMQ_REQ_CORRELATE */
+  OPT_TYPE_INT,  /* 53 ZMQ_REQ_RELAXED */
+  OPT_TYPE_INT,  /* 54 ZMQ_CONFLATE */
+  OPT_TYPE_BLOB,  /* 55 ZMQ_ZAP_DOMAIN */
+#endif /* #if VERSION_4_0 */
+#if VERSION_4_0
+#  define MAX_OPTS VERSION_4_0_MAX_OPT
+#elif VERSION_3_0
 #  define MAX_OPTS VERSION_3_0_MAX_OPT
 #else
 #  if VERSION_2_2
@@ -4528,6 +5436,373 @@ LUA_NOBJ_API ZMQ_Error lzmq_socket_ipv4only(ZMQ_Socket *sock, int *value) {
 }
 
 #endif /* #if VERSION_3_0 */
+#if VERSION_4_0
+ZMQ_Error lzmq_socket_set_hwm(ZMQ_Socket *sock, int value) {
+	int val;
+	int rc;
+	val = (int)value;
+	rc = zmq_setsockopt(sock, ZMQ_SNDHWM, &value, sizeof(value));
+	if(-1 == rc) return rc;
+	val = (int)value;
+	return zmq_setsockopt(sock, ZMQ_RCVHWM, &value, sizeof(value));
+}
+ZMQ_Error lzmq_socket_hwm(ZMQ_Socket *sock, int *value) {
+	size_t val_len;
+	int rc;
+	val_len = sizeof(value);
+	rc = zmq_getsockopt(sock, ZMQ_SNDHWM, value, &val_len);
+	if(-1 == rc) return rc;
+	val_len = sizeof(value);
+	return zmq_getsockopt(sock, ZMQ_RCVHWM, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_affinity(ZMQ_Socket *sock, uint64_t value) {
+	return zmq_setsockopt(sock, ZMQ_AFFINITY, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_affinity(ZMQ_Socket *sock, uint64_t *value) {
+	size_t val_len = sizeof(uint64_t);
+	return zmq_getsockopt(sock, ZMQ_AFFINITY, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_identity(ZMQ_Socket *sock, const char *value, size_t str_len) {
+	return zmq_setsockopt(sock, ZMQ_IDENTITY, value, str_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_identity(ZMQ_Socket *sock, char *value, size_t *len) {
+	return zmq_getsockopt(sock, ZMQ_IDENTITY, value, len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_subscribe(ZMQ_Socket *sock, const char *value, size_t str_len) {
+	return zmq_setsockopt(sock, ZMQ_SUBSCRIBE, value, str_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_unsubscribe(ZMQ_Socket *sock, const char *value, size_t str_len) {
+	return zmq_setsockopt(sock, ZMQ_UNSUBSCRIBE, value, str_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_rate(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_RATE, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_rate(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_RATE, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_recovery_ivl(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_RECOVERY_IVL, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_recovery_ivl(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_RECOVERY_IVL, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_sndbuf(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_SNDBUF, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_sndbuf(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_SNDBUF, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_rcvbuf(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_RCVBUF, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_rcvbuf(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_RCVBUF, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_rcvmore(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_RCVMORE, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_fd(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_FD, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_events(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_EVENTS, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_type(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_TYPE, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_linger(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_LINGER, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_linger(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_LINGER, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_reconnect_ivl(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_RECONNECT_IVL, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_reconnect_ivl(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_RECONNECT_IVL, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_backlog(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_BACKLOG, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_backlog(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_BACKLOG, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_reconnect_ivl_max(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_RECONNECT_IVL_MAX, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_reconnect_ivl_max(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_RECONNECT_IVL_MAX, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_maxmsgsize(ZMQ_Socket *sock, int64_t value) {
+	return zmq_setsockopt(sock, ZMQ_MAXMSGSIZE, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_maxmsgsize(ZMQ_Socket *sock, int64_t *value) {
+	size_t val_len = sizeof(int64_t);
+	return zmq_getsockopt(sock, ZMQ_MAXMSGSIZE, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_sndhwm(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_SNDHWM, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_sndhwm(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_SNDHWM, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_rcvhwm(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_RCVHWM, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_rcvhwm(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_RCVHWM, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_multicast_hops(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_MULTICAST_HOPS, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_multicast_hops(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_MULTICAST_HOPS, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_rcvtimeo(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_RCVTIMEO, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_rcvtimeo(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_RCVTIMEO, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_sndtimeo(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_SNDTIMEO, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_sndtimeo(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_SNDTIMEO, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_ipv4only(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_IPV4ONLY, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_ipv4only(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_IPV4ONLY, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_last_endpoint(ZMQ_Socket *sock, char *value, size_t *len) {
+	return zmq_getsockopt(sock, ZMQ_LAST_ENDPOINT, value, len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_router_mandatory(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_ROUTER_MANDATORY, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_tcp_keepalive(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_TCP_KEEPALIVE, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_tcp_keepalive(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_TCP_KEEPALIVE, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_tcp_keepalive_cnt(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_TCP_KEEPALIVE_CNT, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_tcp_keepalive_cnt(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_TCP_KEEPALIVE_CNT, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_tcp_keepalive_idle(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_TCP_KEEPALIVE_IDLE, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_tcp_keepalive_idle(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_TCP_KEEPALIVE_IDLE, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_tcp_keepalive_intvl(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_TCP_KEEPALIVE_INTVL, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_tcp_keepalive_intvl(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_TCP_KEEPALIVE_INTVL, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_tcp_accept_filter(ZMQ_Socket *sock, const char *value, size_t str_len) {
+	return zmq_setsockopt(sock, ZMQ_TCP_ACCEPT_FILTER, value, str_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_immediate(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_IMMEDIATE, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_immediate(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_IMMEDIATE, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_xpub_verbose(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_XPUB_VERBOSE, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_router_raw(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_ROUTER_RAW, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_ipv6(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_IPV6, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_ipv6(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_IPV6, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_mechanism(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_MECHANISM, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_plain_server(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_PLAIN_SERVER, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_plain_server(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_PLAIN_SERVER, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_plain_username(ZMQ_Socket *sock, const char *value, size_t str_len) {
+	return zmq_setsockopt(sock, ZMQ_PLAIN_USERNAME, value, str_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_plain_username(ZMQ_Socket *sock, char *value, size_t *len) {
+	return zmq_getsockopt(sock, ZMQ_PLAIN_USERNAME, value, len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_plain_password(ZMQ_Socket *sock, const char *value, size_t str_len) {
+	return zmq_setsockopt(sock, ZMQ_PLAIN_PASSWORD, value, str_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_plain_password(ZMQ_Socket *sock, char *value, size_t *len) {
+	return zmq_getsockopt(sock, ZMQ_PLAIN_PASSWORD, value, len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_curve_server(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_CURVE_SERVER, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_curve_server(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_CURVE_SERVER, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_curve_publickey(ZMQ_Socket *sock, const char *value, size_t str_len) {
+	return zmq_setsockopt(sock, ZMQ_CURVE_PUBLICKEY, value, str_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_curve_publickey(ZMQ_Socket *sock, char *value, size_t *len) {
+	return zmq_getsockopt(sock, ZMQ_CURVE_PUBLICKEY, value, len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_curve_secretkey(ZMQ_Socket *sock, const char *value, size_t str_len) {
+	return zmq_setsockopt(sock, ZMQ_CURVE_SECRETKEY, value, str_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_curve_secretkey(ZMQ_Socket *sock, char *value, size_t *len) {
+	return zmq_getsockopt(sock, ZMQ_CURVE_SECRETKEY, value, len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_curve_serverkey(ZMQ_Socket *sock, const char *value, size_t str_len) {
+	return zmq_setsockopt(sock, ZMQ_CURVE_SERVERKEY, value, str_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_curve_serverkey(ZMQ_Socket *sock, char *value, size_t *len) {
+	return zmq_getsockopt(sock, ZMQ_CURVE_SERVERKEY, value, len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_probe_router(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_PROBE_ROUTER, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_req_correlate(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_REQ_CORRELATE, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_req_relaxed(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_REQ_RELAXED, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_conflate(ZMQ_Socket *sock, int value) {
+	return zmq_setsockopt(sock, ZMQ_CONFLATE, &value, sizeof(value));
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_conflate(ZMQ_Socket *sock, int *value) {
+	size_t val_len = sizeof(int);
+	return zmq_getsockopt(sock, ZMQ_CONFLATE, value, &val_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_set_zap_domain(ZMQ_Socket *sock, const char *value, size_t str_len) {
+	return zmq_setsockopt(sock, ZMQ_ZAP_DOMAIN, value, str_len);
+}
+
+LUA_NOBJ_API ZMQ_Error lzmq_socket_zap_domain(ZMQ_Socket *sock, char *value, size_t *len) {
+	return zmq_getsockopt(sock, ZMQ_ZAP_DOMAIN, value, len);
+}
+
+#endif /* #if VERSION_4_0 */
 
 LUA_NOBJ_API ZMQ_Error simple_zmq_send(ZMQ_Socket *sock, const char *data, size_t data_len, int flags) {
 	ZMQ_Error err;
@@ -4544,6 +5819,125 @@ LUA_NOBJ_API ZMQ_Error simple_zmq_send(ZMQ_Socket *sock, const char *data, size_
 	}
 	return err;
 }
+
+typedef struct ZMQ_recv_event {
+	int        event_id;
+	int        value;
+	const char *addr;
+	size_t     addr_len;
+	const char *err;
+} ZMQ_recv_event;
+
+int monitor_recv_event(ZMQ_Socket *s, zmq_msg_t *msg, int flags, ZMQ_recv_event *ev)
+{
+	int rc ;
+	zmq_event_t event;
+
+	ev->event_id = 0;
+	ev->value = 0;
+	ev->addr = NULL;
+	ev->err = NULL;
+	ev->addr_len = 0;
+	zmq_msg_init(msg);
+
+	/* recv binary event. */
+	rc = zmq_recvmsg(s, msg, flags);
+	if(rc < 0) {
+		return rc;
+	}
+#if ZMQ_VERSION_MAJOR == 3
+	if(zmq_msg_size(msg) != sizeof(event)) {
+		ev->err = "Invalid monitor event.  Wrong event size.";
+		return -1;
+	}
+	memcpy(&event, zmq_msg_data(msg), sizeof(event));
+	ev->event_id = event.event;
+
+	switch(event.event) {
+	case ZMQ_EVENT_CONNECTED:
+		ev->value = event.data.connected.fd;
+		ev->addr = event.data.connected.addr;
+		break;
+	case ZMQ_EVENT_CONNECT_DELAYED:
+		ev->value = event.data.connect_delayed.err;
+		ev->addr = event.data.connect_delayed.addr;
+		break;
+	case ZMQ_EVENT_CONNECT_RETRIED:
+		ev->value = event.data.connect_retried.interval;
+		ev->addr = event.data.connect_retried.addr;
+		break;
+	case ZMQ_EVENT_LISTENING:
+		ev->value = event.data.listening.fd;
+		ev->addr = event.data.listening.addr;
+		break;
+	case ZMQ_EVENT_BIND_FAILED:
+		ev->value = event.data.bind_failed.err;
+		ev->addr = event.data.bind_failed.addr;
+		break;
+	case ZMQ_EVENT_ACCEPTED:
+		ev->value = event.data.accepted.fd;
+		ev->addr = event.data.accepted.addr;
+		break;
+	case ZMQ_EVENT_ACCEPT_FAILED:
+		ev->value = event.data.accept_failed.err;
+		ev->addr = event.data.accept_failed.addr;
+		break;
+	case ZMQ_EVENT_CLOSED:
+		ev->value = event.data.closed.fd;
+		ev->addr = event.data.closed.addr;
+		break;
+	case ZMQ_EVENT_CLOSE_FAILED:
+		ev->value = event.data.close_failed.err;
+		ev->addr = event.data.close_failed.addr;
+		break;
+	case ZMQ_EVENT_DISCONNECTED:
+		ev->value = event.data.disconnected.fd;
+		ev->addr = event.data.disconnected.addr;
+		break;
+	}
+	if(ev->addr) {
+		ev->addr_len = strlen(ev->addr);
+	}
+
+	if(zmq_msg_more(msg) != 0) {
+		ev->err = "Invalid monitor event.  Has too many parts.";
+		return -1;
+	}
+#else
+	if(zmq_msg_size(msg) != (sizeof(event.event) + sizeof(event.value))) {
+		ev->err = "Invalid monitor event.  Wrong event size.";
+		return -1;
+	}
+	/* copy binary data to event struct */
+	const char* data = (char*)zmq_msg_data(msg);
+	memcpy(&(event.event), data, sizeof(event.event));
+	memcpy(&(event.value), data+sizeof(event.event), sizeof(event.value));
+	ev->event_id = event.event;
+	ev->value = event.value;
+
+	if(zmq_msg_more(msg) == 0) {
+		ev->err = "Invalid monitor event.  Missing address part.";
+		return -1;
+	}
+	ev->value = event.value;
+
+	/* recv address part */
+	rc = zmq_recvmsg(s, msg, flags);
+	if(rc < 0) {
+		return rc;
+	}
+	if(zmq_msg_more(msg) != 0) {
+		ev->err = "Invalid monitor event.  Has too many parts.";
+		return -1;
+	}
+	/* copy address part */
+	ev->addr_len = zmq_msg_size(msg) ;
+	ev->addr = zmq_msg_data(msg);
+#endif
+
+	return 1;
+}
+
 
 struct ZMQ_Poller {
 	zmq_pollitem_t *items;
@@ -5123,7 +6517,7 @@ static int ZMQ_Socket__bind__meth(lua_State *L) {
 }
 
 /* method: unbind */
-#if (VERSION_3_2)
+#if (VERSION_3_2|VERSION_4_0)
 static int ZMQ_Socket__unbind__meth(lua_State *L) {
   ZMQ_Socket * this1;
   size_t addr_len2;
@@ -5165,7 +6559,7 @@ static int ZMQ_Socket__connect__meth(lua_State *L) {
 }
 
 /* method: disconnect */
-#if (VERSION_3_2)
+#if (VERSION_3_2|VERSION_4_0)
 static int ZMQ_Socket__disconnect__meth(lua_State *L) {
   ZMQ_Socket * this1;
   size_t addr_len2;
@@ -5196,7 +6590,7 @@ static int ZMQ_Socket__setopt__meth(lua_State *L) {
 	size_t val_len;
 	const void *val;
 
-#if defined(VERSION_2_1) || defined(VERSION_3_0)
+#if VERSION_2_1 || VERSION_3_0 || VERSION_4_0
 	socket_t fd_val;
 #endif
 	int int_val;
@@ -5204,7 +6598,7 @@ static int ZMQ_Socket__setopt__meth(lua_State *L) {
 	uint64_t uint64_val;
 	int64_t int64_val;
 
-#if VERSION_3_0
+#if VERSION_3_0 || VERSION_4_0
 	/* 3.0 backwards compatibility support for HWM. */
 	if(opt2 == ZMQ_HWM) {
 		int_val = luaL_checklong(L, 3);
@@ -5223,7 +6617,7 @@ static int ZMQ_Socket__setopt__meth(lua_State *L) {
 	}
 
 	switch(opt_types[opt2]) {
-#if defined(VERSION_2_1) || defined(VERSION_3_0)
+#if VERSION_2_1 || VERSION_3_0 || VERSION_4_0
 	case OPT_TYPE_FD:
 		fd_val = luaL_checklong(L, 3);
 		val = &fd_val;
@@ -5281,7 +6675,7 @@ static int ZMQ_Socket__getopt__meth(lua_State *L) {
   opt2 = luaL_checkinteger(L,2);
 	size_t val_len;
 
-#if defined(VERSION_2_1) || defined(VERSION_3_0)
+#if VERSION_2_1 || VERSION_3_0 || VERSION_4_0
 	socket_t fd_val;
 #endif
 	int int_val;
@@ -5298,7 +6692,7 @@ static int ZMQ_Socket__getopt__meth(lua_State *L) {
 	}
 
 	switch(opt_types[opt2]) {
-#if defined(VERSION_2_1) || defined(VERSION_3_0)
+#if VERSION_2_1 || VERSION_3_0 || VERSION_4_0
 	case OPT_TYPE_FD:
 		val_len = sizeof(fd_val);
 		err2 = zmq_getsockopt(this1, opt2, &fd_val, &val_len);
@@ -5457,8 +6851,84 @@ static int ZMQ_Socket__recv__meth(lua_State *L) {
   return 2;
 }
 
+/* method: monitor */
+#if (VERSION_3_2|VERSION_4_0)
+static int ZMQ_Socket__monitor__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t addr_len2;
+  const char * addr2;
+  int events3;
+  ZMQ_Error rc_zmq_socket_monitor1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  addr2 = luaL_checklstring(L,2,&(addr_len2));
+  events3 = luaL_checkinteger(L,3);
+  rc_zmq_socket_monitor1 = zmq_socket_monitor(this1, addr2, events3);
+  /* check for error. */
+  if((-1 == rc_zmq_socket_monitor1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_zmq_socket_monitor1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: recv_event */
+#if (VERSION_3_2|VERSION_4_0)
+static int ZMQ_Socket__recv_event__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int flags2;
+  int event_id1 = 0;
+  int value2 = 0;
+  size_t addr_len3 = 0;
+  const char * addr3 = NULL;
+  ZMQ_Error err4 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  flags2 = luaL_optinteger(L,2,0);
+	zmq_msg_t msg;
+	ZMQ_recv_event event;
+
+	/* receive monitor event */
+	err4 = monitor_recv_event(this1, &msg, flags2, &event);
+	if(err4 >= 0) {
+		event_id1 = event.event_id;
+		value2 = event.value;
+		addr3 = event.addr;
+		addr_len3 = event.addr_len; //err4;
+	} else if(event.err != NULL) {
+		/* error parsing monitor event. */
+		lua_pushnil(L);
+		lua_pushstring(L, event.err);
+		return 2;
+	}
+
+  if(!(-1 == err4)) {
+    lua_pushinteger(L, event_id1);
+  } else {
+    lua_pushnil(L);
+  }
+  if(!(-1 == err4)) {
+    lua_pushinteger(L, value2);
+  } else {
+    lua_pushnil(L);
+  }
+  if(!(-1 == err4)) {
+    if(addr3 == NULL) lua_pushnil(L);  else lua_pushlstring(L, addr3,addr_len3);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, err4);
+	/* close message */
+	zmq_msg_close(&msg);
+
+  return 4;
+}
+#endif
+
 /* method: hwm */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__hwm__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -5476,7 +6946,7 @@ static int ZMQ_Socket__hwm__meth(lua_State *L) {
 #endif
 
 /* method: set_hwm */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_hwm__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -5536,7 +7006,7 @@ static int ZMQ_Socket__set_swap__meth(lua_State *L) {
 #endif
 
 /* method: affinity */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__affinity__meth(lua_State *L) {
   ZMQ_Socket * this1;
   uint64_t value1 = 0;
@@ -5554,7 +7024,7 @@ static int ZMQ_Socket__affinity__meth(lua_State *L) {
 #endif
 
 /* method: set_affinity */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_affinity__meth(lua_State *L) {
   ZMQ_Socket * this1;
   uint64_t value2;
@@ -5575,7 +7045,7 @@ static int ZMQ_Socket__set_affinity__meth(lua_State *L) {
 #endif
 
 /* method: identity */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__identity__meth(lua_State *L) {
   ZMQ_Socket * this1;
   size_t value_len1 = 0;
@@ -5594,7 +7064,7 @@ static int ZMQ_Socket__identity__meth(lua_State *L) {
 #endif
 
 /* method: set_identity */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_identity__meth(lua_State *L) {
   ZMQ_Socket * this1;
   size_t value_len2;
@@ -5616,7 +7086,7 @@ static int ZMQ_Socket__set_identity__meth(lua_State *L) {
 #endif
 
 /* method: subscribe */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__subscribe__meth(lua_State *L) {
   ZMQ_Socket * this1;
   size_t value_len2;
@@ -5638,7 +7108,7 @@ static int ZMQ_Socket__subscribe__meth(lua_State *L) {
 #endif
 
 /* method: unsubscribe */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__unsubscribe__meth(lua_State *L) {
   ZMQ_Socket * this1;
   size_t value_len2;
@@ -5660,7 +7130,7 @@ static int ZMQ_Socket__unsubscribe__meth(lua_State *L) {
 #endif
 
 /* method: rate */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__rate__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -5678,7 +7148,7 @@ static int ZMQ_Socket__rate__meth(lua_State *L) {
 #endif
 
 /* method: set_rate */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_rate__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -5699,7 +7169,7 @@ static int ZMQ_Socket__set_rate__meth(lua_State *L) {
 #endif
 
 /* method: recovery_ivl */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__recovery_ivl__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -5717,7 +7187,7 @@ static int ZMQ_Socket__recovery_ivl__meth(lua_State *L) {
 #endif
 
 /* method: set_recovery_ivl */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_recovery_ivl__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -5777,7 +7247,7 @@ static int ZMQ_Socket__set_mcast_loop__meth(lua_State *L) {
 #endif
 
 /* method: sndbuf */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__sndbuf__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -5795,7 +7265,7 @@ static int ZMQ_Socket__sndbuf__meth(lua_State *L) {
 #endif
 
 /* method: set_sndbuf */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_sndbuf__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -5816,7 +7286,7 @@ static int ZMQ_Socket__set_sndbuf__meth(lua_State *L) {
 #endif
 
 /* method: rcvbuf */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__rcvbuf__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -5834,7 +7304,7 @@ static int ZMQ_Socket__rcvbuf__meth(lua_State *L) {
 #endif
 
 /* method: set_rcvbuf */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_rcvbuf__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -5855,7 +7325,7 @@ static int ZMQ_Socket__set_rcvbuf__meth(lua_State *L) {
 #endif
 
 /* method: rcvmore */
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__rcvmore__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -5873,7 +7343,7 @@ static int ZMQ_Socket__rcvmore__meth(lua_State *L) {
 #endif
 
 /* method: fd */
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__fd__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -5891,7 +7361,7 @@ static int ZMQ_Socket__fd__meth(lua_State *L) {
 #endif
 
 /* method: events */
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__events__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -5909,7 +7379,7 @@ static int ZMQ_Socket__events__meth(lua_State *L) {
 #endif
 
 /* method: type */
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__type__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -5927,7 +7397,7 @@ static int ZMQ_Socket__type__meth(lua_State *L) {
 #endif
 
 /* method: linger */
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__linger__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -5945,7 +7415,7 @@ static int ZMQ_Socket__linger__meth(lua_State *L) {
 #endif
 
 /* method: set_linger */
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_linger__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -5966,7 +7436,7 @@ static int ZMQ_Socket__set_linger__meth(lua_State *L) {
 #endif
 
 /* method: reconnect_ivl */
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__reconnect_ivl__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -5984,7 +7454,7 @@ static int ZMQ_Socket__reconnect_ivl__meth(lua_State *L) {
 #endif
 
 /* method: set_reconnect_ivl */
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_reconnect_ivl__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -6005,7 +7475,7 @@ static int ZMQ_Socket__set_reconnect_ivl__meth(lua_State *L) {
 #endif
 
 /* method: backlog */
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__backlog__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -6023,7 +7493,7 @@ static int ZMQ_Socket__backlog__meth(lua_State *L) {
 #endif
 
 /* method: set_backlog */
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_backlog__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -6083,7 +7553,7 @@ static int ZMQ_Socket__set_recovery_ivl_msec__meth(lua_State *L) {
 #endif
 
 /* method: reconnect_ivl_max */
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__reconnect_ivl_max__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -6101,7 +7571,7 @@ static int ZMQ_Socket__reconnect_ivl_max__meth(lua_State *L) {
 #endif
 
 /* method: set_reconnect_ivl_max */
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_reconnect_ivl_max__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -6122,7 +7592,7 @@ static int ZMQ_Socket__set_reconnect_ivl_max__meth(lua_State *L) {
 #endif
 
 /* method: maxmsgsize */
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__maxmsgsize__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int64_t value1 = 0;
@@ -6140,7 +7610,7 @@ static int ZMQ_Socket__maxmsgsize__meth(lua_State *L) {
 #endif
 
 /* method: set_maxmsgsize */
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_maxmsgsize__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int64_t value2;
@@ -6161,7 +7631,7 @@ static int ZMQ_Socket__set_maxmsgsize__meth(lua_State *L) {
 #endif
 
 /* method: sndhwm */
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__sndhwm__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -6179,7 +7649,7 @@ static int ZMQ_Socket__sndhwm__meth(lua_State *L) {
 #endif
 
 /* method: set_sndhwm */
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_sndhwm__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -6200,7 +7670,7 @@ static int ZMQ_Socket__set_sndhwm__meth(lua_State *L) {
 #endif
 
 /* method: rcvhwm */
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__rcvhwm__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -6218,7 +7688,7 @@ static int ZMQ_Socket__rcvhwm__meth(lua_State *L) {
 #endif
 
 /* method: set_rcvhwm */
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_rcvhwm__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -6239,7 +7709,7 @@ static int ZMQ_Socket__set_rcvhwm__meth(lua_State *L) {
 #endif
 
 /* method: multicast_hops */
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__multicast_hops__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -6257,7 +7727,7 @@ static int ZMQ_Socket__multicast_hops__meth(lua_State *L) {
 #endif
 
 /* method: set_multicast_hops */
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_multicast_hops__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -6278,7 +7748,7 @@ static int ZMQ_Socket__set_multicast_hops__meth(lua_State *L) {
 #endif
 
 /* method: rcvtimeo */
-#if (VERSION_2_2|VERSION_3_0)
+#if (VERSION_2_2|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__rcvtimeo__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -6296,7 +7766,7 @@ static int ZMQ_Socket__rcvtimeo__meth(lua_State *L) {
 #endif
 
 /* method: set_rcvtimeo */
-#if (VERSION_2_2|VERSION_3_0)
+#if (VERSION_2_2|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_rcvtimeo__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -6317,7 +7787,7 @@ static int ZMQ_Socket__set_rcvtimeo__meth(lua_State *L) {
 #endif
 
 /* method: sndtimeo */
-#if (VERSION_2_2|VERSION_3_0)
+#if (VERSION_2_2|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__sndtimeo__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -6335,7 +7805,7 @@ static int ZMQ_Socket__sndtimeo__meth(lua_State *L) {
 #endif
 
 /* method: set_sndtimeo */
-#if (VERSION_2_2|VERSION_3_0)
+#if (VERSION_2_2|VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_sndtimeo__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -6356,7 +7826,7 @@ static int ZMQ_Socket__set_sndtimeo__meth(lua_State *L) {
 #endif
 
 /* method: ipv4only */
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__ipv4only__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value1 = 0;
@@ -6374,7 +7844,7 @@ static int ZMQ_Socket__ipv4only__meth(lua_State *L) {
 #endif
 
 /* method: set_ipv4only */
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
 static int ZMQ_Socket__set_ipv4only__meth(lua_State *L) {
   ZMQ_Socket * this1;
   int value2;
@@ -6386,6 +7856,788 @@ static int ZMQ_Socket__set_ipv4only__meth(lua_State *L) {
   if((-1 == rc_lzmq_socket_set_ipv4only1)) {
     lua_pushnil(L);
       error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_ipv4only1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: last_endpoint */
+#if (VERSION_4_0)
+static int ZMQ_Socket__last_endpoint__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len1 = 0;
+  char * value1 = NULL;
+  ZMQ_Error rc_lzmq_socket_last_endpoint2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_last_endpoint2 = lzmq_socket_last_endpoint(this1, value1, &(value_len1));
+  if(!(-1 == rc_lzmq_socket_last_endpoint2)) {
+    if(value1 == NULL) lua_pushnil(L);  else lua_pushlstring(L, value1,value_len1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_last_endpoint2);
+  return 2;
+}
+#endif
+
+/* method: router_mandatory */
+#if (VERSION_4_0)
+static int ZMQ_Socket__router_mandatory__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_router_mandatory1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_router_mandatory1 = lzmq_socket_router_mandatory(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_router_mandatory1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_router_mandatory1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: tcp_keepalive */
+#if (VERSION_4_0)
+static int ZMQ_Socket__tcp_keepalive__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value1 = 0;
+  ZMQ_Error rc_lzmq_socket_tcp_keepalive2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_tcp_keepalive2 = lzmq_socket_tcp_keepalive(this1, &(value1));
+  if(!(-1 == rc_lzmq_socket_tcp_keepalive2)) {
+    lua_pushinteger(L, value1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_tcp_keepalive2);
+  return 2;
+}
+#endif
+
+/* method: set_tcp_keepalive */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_tcp_keepalive__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_set_tcp_keepalive1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_set_tcp_keepalive1 = lzmq_socket_set_tcp_keepalive(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_tcp_keepalive1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_tcp_keepalive1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: tcp_keepalive_cnt */
+#if (VERSION_4_0)
+static int ZMQ_Socket__tcp_keepalive_cnt__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value1 = 0;
+  ZMQ_Error rc_lzmq_socket_tcp_keepalive_cnt2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_tcp_keepalive_cnt2 = lzmq_socket_tcp_keepalive_cnt(this1, &(value1));
+  if(!(-1 == rc_lzmq_socket_tcp_keepalive_cnt2)) {
+    lua_pushinteger(L, value1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_tcp_keepalive_cnt2);
+  return 2;
+}
+#endif
+
+/* method: set_tcp_keepalive_cnt */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_tcp_keepalive_cnt__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_set_tcp_keepalive_cnt1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_set_tcp_keepalive_cnt1 = lzmq_socket_set_tcp_keepalive_cnt(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_tcp_keepalive_cnt1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_tcp_keepalive_cnt1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: tcp_keepalive_idle */
+#if (VERSION_4_0)
+static int ZMQ_Socket__tcp_keepalive_idle__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value1 = 0;
+  ZMQ_Error rc_lzmq_socket_tcp_keepalive_idle2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_tcp_keepalive_idle2 = lzmq_socket_tcp_keepalive_idle(this1, &(value1));
+  if(!(-1 == rc_lzmq_socket_tcp_keepalive_idle2)) {
+    lua_pushinteger(L, value1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_tcp_keepalive_idle2);
+  return 2;
+}
+#endif
+
+/* method: set_tcp_keepalive_idle */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_tcp_keepalive_idle__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_set_tcp_keepalive_idle1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_set_tcp_keepalive_idle1 = lzmq_socket_set_tcp_keepalive_idle(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_tcp_keepalive_idle1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_tcp_keepalive_idle1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: tcp_keepalive_intvl */
+#if (VERSION_4_0)
+static int ZMQ_Socket__tcp_keepalive_intvl__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value1 = 0;
+  ZMQ_Error rc_lzmq_socket_tcp_keepalive_intvl2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_tcp_keepalive_intvl2 = lzmq_socket_tcp_keepalive_intvl(this1, &(value1));
+  if(!(-1 == rc_lzmq_socket_tcp_keepalive_intvl2)) {
+    lua_pushinteger(L, value1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_tcp_keepalive_intvl2);
+  return 2;
+}
+#endif
+
+/* method: set_tcp_keepalive_intvl */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_tcp_keepalive_intvl__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_set_tcp_keepalive_intvl1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_set_tcp_keepalive_intvl1 = lzmq_socket_set_tcp_keepalive_intvl(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_tcp_keepalive_intvl1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_tcp_keepalive_intvl1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: tcp_accept_filter */
+#if (VERSION_4_0)
+static int ZMQ_Socket__tcp_accept_filter__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len2;
+  const char * value2;
+  ZMQ_Error rc_lzmq_socket_tcp_accept_filter1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checklstring(L,2,&(value_len2));
+  rc_lzmq_socket_tcp_accept_filter1 = lzmq_socket_tcp_accept_filter(this1, value2, value_len2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_tcp_accept_filter1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_tcp_accept_filter1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: immediate */
+#if (VERSION_4_0)
+static int ZMQ_Socket__immediate__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value1 = 0;
+  ZMQ_Error rc_lzmq_socket_immediate2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_immediate2 = lzmq_socket_immediate(this1, &(value1));
+  if(!(-1 == rc_lzmq_socket_immediate2)) {
+    lua_pushinteger(L, value1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_immediate2);
+  return 2;
+}
+#endif
+
+/* method: set_immediate */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_immediate__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_set_immediate1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_set_immediate1 = lzmq_socket_set_immediate(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_immediate1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_immediate1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: xpub_verbose */
+#if (VERSION_4_0)
+static int ZMQ_Socket__xpub_verbose__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_xpub_verbose1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_xpub_verbose1 = lzmq_socket_xpub_verbose(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_xpub_verbose1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_xpub_verbose1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: router_raw */
+#if (VERSION_4_0)
+static int ZMQ_Socket__router_raw__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_router_raw1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_router_raw1 = lzmq_socket_router_raw(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_router_raw1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_router_raw1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: ipv6 */
+#if (VERSION_4_0)
+static int ZMQ_Socket__ipv6__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value1 = 0;
+  ZMQ_Error rc_lzmq_socket_ipv62 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_ipv62 = lzmq_socket_ipv6(this1, &(value1));
+  if(!(-1 == rc_lzmq_socket_ipv62)) {
+    lua_pushinteger(L, value1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_ipv62);
+  return 2;
+}
+#endif
+
+/* method: set_ipv6 */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_ipv6__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_set_ipv61 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_set_ipv61 = lzmq_socket_set_ipv6(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_ipv61)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_ipv61);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: mechanism */
+#if (VERSION_4_0)
+static int ZMQ_Socket__mechanism__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value1 = 0;
+  ZMQ_Error rc_lzmq_socket_mechanism2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_mechanism2 = lzmq_socket_mechanism(this1, &(value1));
+  if(!(-1 == rc_lzmq_socket_mechanism2)) {
+    lua_pushinteger(L, value1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_mechanism2);
+  return 2;
+}
+#endif
+
+/* method: plain_server */
+#if (VERSION_4_0)
+static int ZMQ_Socket__plain_server__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value1 = 0;
+  ZMQ_Error rc_lzmq_socket_plain_server2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_plain_server2 = lzmq_socket_plain_server(this1, &(value1));
+  if(!(-1 == rc_lzmq_socket_plain_server2)) {
+    lua_pushinteger(L, value1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_plain_server2);
+  return 2;
+}
+#endif
+
+/* method: set_plain_server */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_plain_server__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_set_plain_server1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_set_plain_server1 = lzmq_socket_set_plain_server(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_plain_server1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_plain_server1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: plain_username */
+#if (VERSION_4_0)
+static int ZMQ_Socket__plain_username__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len1 = 0;
+  char * value1 = NULL;
+  ZMQ_Error rc_lzmq_socket_plain_username2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_plain_username2 = lzmq_socket_plain_username(this1, value1, &(value_len1));
+  if(!(-1 == rc_lzmq_socket_plain_username2)) {
+    if(value1 == NULL) lua_pushnil(L);  else lua_pushlstring(L, value1,value_len1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_plain_username2);
+  return 2;
+}
+#endif
+
+/* method: set_plain_username */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_plain_username__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len2;
+  const char * value2;
+  ZMQ_Error rc_lzmq_socket_set_plain_username1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checklstring(L,2,&(value_len2));
+  rc_lzmq_socket_set_plain_username1 = lzmq_socket_set_plain_username(this1, value2, value_len2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_plain_username1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_plain_username1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: plain_password */
+#if (VERSION_4_0)
+static int ZMQ_Socket__plain_password__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len1 = 0;
+  char * value1 = NULL;
+  ZMQ_Error rc_lzmq_socket_plain_password2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_plain_password2 = lzmq_socket_plain_password(this1, value1, &(value_len1));
+  if(!(-1 == rc_lzmq_socket_plain_password2)) {
+    if(value1 == NULL) lua_pushnil(L);  else lua_pushlstring(L, value1,value_len1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_plain_password2);
+  return 2;
+}
+#endif
+
+/* method: set_plain_password */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_plain_password__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len2;
+  const char * value2;
+  ZMQ_Error rc_lzmq_socket_set_plain_password1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checklstring(L,2,&(value_len2));
+  rc_lzmq_socket_set_plain_password1 = lzmq_socket_set_plain_password(this1, value2, value_len2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_plain_password1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_plain_password1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: curve_server */
+#if (VERSION_4_0)
+static int ZMQ_Socket__curve_server__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value1 = 0;
+  ZMQ_Error rc_lzmq_socket_curve_server2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_curve_server2 = lzmq_socket_curve_server(this1, &(value1));
+  if(!(-1 == rc_lzmq_socket_curve_server2)) {
+    lua_pushinteger(L, value1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_curve_server2);
+  return 2;
+}
+#endif
+
+/* method: set_curve_server */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_curve_server__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_set_curve_server1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_set_curve_server1 = lzmq_socket_set_curve_server(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_curve_server1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_curve_server1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: curve_publickey */
+#if (VERSION_4_0)
+static int ZMQ_Socket__curve_publickey__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len1 = 0;
+  char * value1 = NULL;
+  ZMQ_Error rc_lzmq_socket_curve_publickey2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_curve_publickey2 = lzmq_socket_curve_publickey(this1, value1, &(value_len1));
+  if(!(-1 == rc_lzmq_socket_curve_publickey2)) {
+    if(value1 == NULL) lua_pushnil(L);  else lua_pushlstring(L, value1,value_len1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_curve_publickey2);
+  return 2;
+}
+#endif
+
+/* method: set_curve_publickey */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_curve_publickey__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len2;
+  const char * value2;
+  ZMQ_Error rc_lzmq_socket_set_curve_publickey1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checklstring(L,2,&(value_len2));
+  rc_lzmq_socket_set_curve_publickey1 = lzmq_socket_set_curve_publickey(this1, value2, value_len2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_curve_publickey1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_curve_publickey1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: curve_secretkey */
+#if (VERSION_4_0)
+static int ZMQ_Socket__curve_secretkey__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len1 = 0;
+  char * value1 = NULL;
+  ZMQ_Error rc_lzmq_socket_curve_secretkey2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_curve_secretkey2 = lzmq_socket_curve_secretkey(this1, value1, &(value_len1));
+  if(!(-1 == rc_lzmq_socket_curve_secretkey2)) {
+    if(value1 == NULL) lua_pushnil(L);  else lua_pushlstring(L, value1,value_len1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_curve_secretkey2);
+  return 2;
+}
+#endif
+
+/* method: set_curve_secretkey */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_curve_secretkey__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len2;
+  const char * value2;
+  ZMQ_Error rc_lzmq_socket_set_curve_secretkey1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checklstring(L,2,&(value_len2));
+  rc_lzmq_socket_set_curve_secretkey1 = lzmq_socket_set_curve_secretkey(this1, value2, value_len2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_curve_secretkey1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_curve_secretkey1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: curve_serverkey */
+#if (VERSION_4_0)
+static int ZMQ_Socket__curve_serverkey__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len1 = 0;
+  char * value1 = NULL;
+  ZMQ_Error rc_lzmq_socket_curve_serverkey2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_curve_serverkey2 = lzmq_socket_curve_serverkey(this1, value1, &(value_len1));
+  if(!(-1 == rc_lzmq_socket_curve_serverkey2)) {
+    if(value1 == NULL) lua_pushnil(L);  else lua_pushlstring(L, value1,value_len1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_curve_serverkey2);
+  return 2;
+}
+#endif
+
+/* method: set_curve_serverkey */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_curve_serverkey__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len2;
+  const char * value2;
+  ZMQ_Error rc_lzmq_socket_set_curve_serverkey1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checklstring(L,2,&(value_len2));
+  rc_lzmq_socket_set_curve_serverkey1 = lzmq_socket_set_curve_serverkey(this1, value2, value_len2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_curve_serverkey1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_curve_serverkey1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: probe_router */
+#if (VERSION_4_0)
+static int ZMQ_Socket__probe_router__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_probe_router1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_probe_router1 = lzmq_socket_probe_router(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_probe_router1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_probe_router1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: req_correlate */
+#if (VERSION_4_0)
+static int ZMQ_Socket__req_correlate__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_req_correlate1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_req_correlate1 = lzmq_socket_req_correlate(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_req_correlate1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_req_correlate1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: req_relaxed */
+#if (VERSION_4_0)
+static int ZMQ_Socket__req_relaxed__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_req_relaxed1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_req_relaxed1 = lzmq_socket_req_relaxed(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_req_relaxed1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_req_relaxed1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: conflate */
+#if (VERSION_4_0)
+static int ZMQ_Socket__conflate__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value1 = 0;
+  ZMQ_Error rc_lzmq_socket_conflate2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_conflate2 = lzmq_socket_conflate(this1, &(value1));
+  if(!(-1 == rc_lzmq_socket_conflate2)) {
+    lua_pushinteger(L, value1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_conflate2);
+  return 2;
+}
+#endif
+
+/* method: set_conflate */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_conflate__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  int value2;
+  ZMQ_Error rc_lzmq_socket_set_conflate1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checkinteger(L,2);
+  rc_lzmq_socket_set_conflate1 = lzmq_socket_set_conflate(this1, value2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_conflate1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_conflate1);
+  } else {
+    lua_pushboolean(L, 1);
+    lua_pushnil(L);
+  }
+  return 2;
+}
+#endif
+
+/* method: zap_domain */
+#if (VERSION_4_0)
+static int ZMQ_Socket__zap_domain__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len1 = 0;
+  char * value1 = NULL;
+  ZMQ_Error rc_lzmq_socket_zap_domain2 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  rc_lzmq_socket_zap_domain2 = lzmq_socket_zap_domain(this1, value1, &(value_len1));
+  if(!(-1 == rc_lzmq_socket_zap_domain2)) {
+    if(value1 == NULL) lua_pushnil(L);  else lua_pushlstring(L, value1,value_len1);
+  } else {
+    lua_pushnil(L);
+  }
+  error_code__ZMQ_Error__push(L, rc_lzmq_socket_zap_domain2);
+  return 2;
+}
+#endif
+
+/* method: set_zap_domain */
+#if (VERSION_4_0)
+static int ZMQ_Socket__set_zap_domain__meth(lua_State *L) {
+  ZMQ_Socket * this1;
+  size_t value_len2;
+  const char * value2;
+  ZMQ_Error rc_lzmq_socket_set_zap_domain1 = 0;
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  value2 = luaL_checklstring(L,2,&(value_len2));
+  rc_lzmq_socket_set_zap_domain1 = lzmq_socket_set_zap_domain(this1, value2, value_len2);
+  /* check for error. */
+  if((-1 == rc_lzmq_socket_set_zap_domain1)) {
+    lua_pushnil(L);
+      error_code__ZMQ_Error__push(L, rc_lzmq_socket_set_zap_domain1);
   } else {
     lua_pushboolean(L, 1);
     lua_pushnil(L);
@@ -6609,7 +8861,7 @@ static int ZMQ_Ctx__socket__meth(lua_State *L) {
 }
 
 /* method: set */
-#if (VERSION_3_2)
+#if (VERSION_3_2|VERSION_4_0)
 static int ZMQ_Ctx__set__meth(lua_State *L) {
   ZMQ_Ctx * this1;
   int flag2;
@@ -6625,7 +8877,7 @@ static int ZMQ_Ctx__set__meth(lua_State *L) {
 #endif
 
 /* method: get */
-#if (VERSION_3_2)
+#if (VERSION_3_2|VERSION_4_0)
 static int ZMQ_Ctx__get__meth(lua_State *L) {
   ZMQ_Ctx * this1;
   int flag2;
@@ -7259,11 +9511,11 @@ static const luaL_Reg obj_ZMQ_Socket_pub_funcs[] = {
 static const luaL_Reg obj_ZMQ_Socket_methods[] = {
   {"close", ZMQ_Socket__close__meth},
   {"bind", ZMQ_Socket__bind__meth},
-#if (VERSION_3_2)
+#if (VERSION_3_2|VERSION_4_0)
   {"unbind", ZMQ_Socket__unbind__meth},
 #endif
   {"connect", ZMQ_Socket__connect__meth},
-#if (VERSION_3_2)
+#if (VERSION_3_2|VERSION_4_0)
   {"disconnect", ZMQ_Socket__disconnect__meth},
 #endif
   {"setopt", ZMQ_Socket__setopt__meth},
@@ -7272,10 +9524,16 @@ static const luaL_Reg obj_ZMQ_Socket_methods[] = {
   {"send", ZMQ_Socket__send__meth},
   {"recv_msg", ZMQ_Socket__recv_msg__meth},
   {"recv", ZMQ_Socket__recv__meth},
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_3_2|VERSION_4_0)
+  {"monitor", ZMQ_Socket__monitor__meth},
+#endif
+#if (VERSION_3_2|VERSION_4_0)
+  {"recv_event", ZMQ_Socket__recv_event__meth},
+#endif
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"hwm", ZMQ_Socket__hwm__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"set_hwm", ZMQ_Socket__set_hwm__meth},
 #endif
 #if (VERSION_2_0)
@@ -7284,34 +9542,34 @@ static const luaL_Reg obj_ZMQ_Socket_methods[] = {
 #if (VERSION_2_0)
   {"set_swap", ZMQ_Socket__set_swap__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"affinity", ZMQ_Socket__affinity__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"set_affinity", ZMQ_Socket__set_affinity__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"identity", ZMQ_Socket__identity__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"set_identity", ZMQ_Socket__set_identity__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"subscribe", ZMQ_Socket__subscribe__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"unsubscribe", ZMQ_Socket__unsubscribe__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"rate", ZMQ_Socket__rate__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"set_rate", ZMQ_Socket__set_rate__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"recovery_ivl", ZMQ_Socket__recovery_ivl__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"set_recovery_ivl", ZMQ_Socket__set_recovery_ivl__meth},
 #endif
 #if (VERSION_2_0)
@@ -7320,46 +9578,46 @@ static const luaL_Reg obj_ZMQ_Socket_methods[] = {
 #if (VERSION_2_0)
   {"set_mcast_loop", ZMQ_Socket__set_mcast_loop__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"sndbuf", ZMQ_Socket__sndbuf__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"set_sndbuf", ZMQ_Socket__set_sndbuf__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"rcvbuf", ZMQ_Socket__rcvbuf__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"set_rcvbuf", ZMQ_Socket__set_rcvbuf__meth},
 #endif
-#if (VERSION_2_0|VERSION_3_0)
+#if (VERSION_2_0|VERSION_3_0|VERSION_4_0)
   {"rcvmore", ZMQ_Socket__rcvmore__meth},
 #endif
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
   {"fd", ZMQ_Socket__fd__meth},
 #endif
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
   {"events", ZMQ_Socket__events__meth},
 #endif
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
   {"type", ZMQ_Socket__type__meth},
 #endif
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
   {"linger", ZMQ_Socket__linger__meth},
 #endif
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
   {"set_linger", ZMQ_Socket__set_linger__meth},
 #endif
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
   {"reconnect_ivl", ZMQ_Socket__reconnect_ivl__meth},
 #endif
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
   {"set_reconnect_ivl", ZMQ_Socket__set_reconnect_ivl__meth},
 #endif
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
   {"backlog", ZMQ_Socket__backlog__meth},
 #endif
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
   {"set_backlog", ZMQ_Socket__set_backlog__meth},
 #endif
 #if (VERSION_2_1)
@@ -7368,53 +9626,170 @@ static const luaL_Reg obj_ZMQ_Socket_methods[] = {
 #if (VERSION_2_1)
   {"set_recovery_ivl_msec", ZMQ_Socket__set_recovery_ivl_msec__meth},
 #endif
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
   {"reconnect_ivl_max", ZMQ_Socket__reconnect_ivl_max__meth},
 #endif
-#if (VERSION_2_1|VERSION_3_0)
+#if (VERSION_2_1|VERSION_3_0|VERSION_4_0)
   {"set_reconnect_ivl_max", ZMQ_Socket__set_reconnect_ivl_max__meth},
 #endif
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
   {"maxmsgsize", ZMQ_Socket__maxmsgsize__meth},
 #endif
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
   {"set_maxmsgsize", ZMQ_Socket__set_maxmsgsize__meth},
 #endif
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
   {"sndhwm", ZMQ_Socket__sndhwm__meth},
 #endif
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
   {"set_sndhwm", ZMQ_Socket__set_sndhwm__meth},
 #endif
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
   {"rcvhwm", ZMQ_Socket__rcvhwm__meth},
 #endif
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
   {"set_rcvhwm", ZMQ_Socket__set_rcvhwm__meth},
 #endif
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
   {"multicast_hops", ZMQ_Socket__multicast_hops__meth},
 #endif
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
   {"set_multicast_hops", ZMQ_Socket__set_multicast_hops__meth},
 #endif
-#if (VERSION_2_2|VERSION_3_0)
+#if (VERSION_2_2|VERSION_3_0|VERSION_4_0)
   {"rcvtimeo", ZMQ_Socket__rcvtimeo__meth},
 #endif
-#if (VERSION_2_2|VERSION_3_0)
+#if (VERSION_2_2|VERSION_3_0|VERSION_4_0)
   {"set_rcvtimeo", ZMQ_Socket__set_rcvtimeo__meth},
 #endif
-#if (VERSION_2_2|VERSION_3_0)
+#if (VERSION_2_2|VERSION_3_0|VERSION_4_0)
   {"sndtimeo", ZMQ_Socket__sndtimeo__meth},
 #endif
-#if (VERSION_2_2|VERSION_3_0)
+#if (VERSION_2_2|VERSION_3_0|VERSION_4_0)
   {"set_sndtimeo", ZMQ_Socket__set_sndtimeo__meth},
 #endif
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
   {"ipv4only", ZMQ_Socket__ipv4only__meth},
 #endif
-#if (VERSION_3_0)
+#if (VERSION_3_0|VERSION_4_0)
   {"set_ipv4only", ZMQ_Socket__set_ipv4only__meth},
+#endif
+#if (VERSION_4_0)
+  {"last_endpoint", ZMQ_Socket__last_endpoint__meth},
+#endif
+#if (VERSION_4_0)
+  {"router_mandatory", ZMQ_Socket__router_mandatory__meth},
+#endif
+#if (VERSION_4_0)
+  {"tcp_keepalive", ZMQ_Socket__tcp_keepalive__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_tcp_keepalive", ZMQ_Socket__set_tcp_keepalive__meth},
+#endif
+#if (VERSION_4_0)
+  {"tcp_keepalive_cnt", ZMQ_Socket__tcp_keepalive_cnt__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_tcp_keepalive_cnt", ZMQ_Socket__set_tcp_keepalive_cnt__meth},
+#endif
+#if (VERSION_4_0)
+  {"tcp_keepalive_idle", ZMQ_Socket__tcp_keepalive_idle__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_tcp_keepalive_idle", ZMQ_Socket__set_tcp_keepalive_idle__meth},
+#endif
+#if (VERSION_4_0)
+  {"tcp_keepalive_intvl", ZMQ_Socket__tcp_keepalive_intvl__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_tcp_keepalive_intvl", ZMQ_Socket__set_tcp_keepalive_intvl__meth},
+#endif
+#if (VERSION_4_0)
+  {"tcp_accept_filter", ZMQ_Socket__tcp_accept_filter__meth},
+#endif
+#if (VERSION_4_0)
+  {"immediate", ZMQ_Socket__immediate__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_immediate", ZMQ_Socket__set_immediate__meth},
+#endif
+#if (VERSION_4_0)
+  {"xpub_verbose", ZMQ_Socket__xpub_verbose__meth},
+#endif
+#if (VERSION_4_0)
+  {"router_raw", ZMQ_Socket__router_raw__meth},
+#endif
+#if (VERSION_4_0)
+  {"ipv6", ZMQ_Socket__ipv6__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_ipv6", ZMQ_Socket__set_ipv6__meth},
+#endif
+#if (VERSION_4_0)
+  {"mechanism", ZMQ_Socket__mechanism__meth},
+#endif
+#if (VERSION_4_0)
+  {"plain_server", ZMQ_Socket__plain_server__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_plain_server", ZMQ_Socket__set_plain_server__meth},
+#endif
+#if (VERSION_4_0)
+  {"plain_username", ZMQ_Socket__plain_username__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_plain_username", ZMQ_Socket__set_plain_username__meth},
+#endif
+#if (VERSION_4_0)
+  {"plain_password", ZMQ_Socket__plain_password__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_plain_password", ZMQ_Socket__set_plain_password__meth},
+#endif
+#if (VERSION_4_0)
+  {"curve_server", ZMQ_Socket__curve_server__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_curve_server", ZMQ_Socket__set_curve_server__meth},
+#endif
+#if (VERSION_4_0)
+  {"curve_publickey", ZMQ_Socket__curve_publickey__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_curve_publickey", ZMQ_Socket__set_curve_publickey__meth},
+#endif
+#if (VERSION_4_0)
+  {"curve_secretkey", ZMQ_Socket__curve_secretkey__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_curve_secretkey", ZMQ_Socket__set_curve_secretkey__meth},
+#endif
+#if (VERSION_4_0)
+  {"curve_serverkey", ZMQ_Socket__curve_serverkey__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_curve_serverkey", ZMQ_Socket__set_curve_serverkey__meth},
+#endif
+#if (VERSION_4_0)
+  {"probe_router", ZMQ_Socket__probe_router__meth},
+#endif
+#if (VERSION_4_0)
+  {"req_correlate", ZMQ_Socket__req_correlate__meth},
+#endif
+#if (VERSION_4_0)
+  {"req_relaxed", ZMQ_Socket__req_relaxed__meth},
+#endif
+#if (VERSION_4_0)
+  {"conflate", ZMQ_Socket__conflate__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_conflate", ZMQ_Socket__set_conflate__meth},
+#endif
+#if (VERSION_4_0)
+  {"zap_domain", ZMQ_Socket__zap_domain__meth},
+#endif
+#if (VERSION_4_0)
+  {"set_zap_domain", ZMQ_Socket__set_zap_domain__meth},
 #endif
   {NULL, NULL}
 };
@@ -7489,10 +9864,10 @@ static const luaL_Reg obj_ZMQ_Ctx_methods[] = {
   {"term", ZMQ_Ctx__term__meth},
   {"lightuserdata", ZMQ_Ctx__lightuserdata__meth},
   {"socket", ZMQ_Ctx__socket__meth},
-#if (VERSION_3_2)
+#if (VERSION_3_2|VERSION_4_0)
   {"set", ZMQ_Ctx__set__meth},
 #endif
-#if (VERSION_3_2)
+#if (VERSION_3_2|VERSION_4_0)
   {"get", ZMQ_Ctx__get__meth},
 #endif
   {NULL, NULL}
@@ -7570,41 +9945,23 @@ static const luaL_Reg zmq_function[] = {
 };
 
 static const obj_const zmq_constants[] = {
-#ifdef ZMQ_TYPE
-  {"TYPE", NULL, ZMQ_TYPE, CONST_NUMBER},
-#endif
-#ifdef ZMQ_RCVMORE
-  {"RCVMORE", NULL, ZMQ_RCVMORE, CONST_NUMBER},
+#ifdef ZMQ_PLAIN
+  {"PLAIN", NULL, ZMQ_PLAIN, CONST_NUMBER},
 #endif
 #ifdef ZMQ_LINGER
   {"LINGER", NULL, ZMQ_LINGER, CONST_NUMBER},
 #endif
-#ifdef ZMQ_REP
-  {"REP", NULL, ZMQ_REP, CONST_NUMBER},
+#ifdef ZMQ_EVENT_CONNECTED
+  {"EVENT_CONNECTED", NULL, ZMQ_EVENT_CONNECTED, CONST_NUMBER},
 #endif
-#ifdef ZMQ_MAX_VSM_SIZE
-  {"MAX_VSM_SIZE", NULL, ZMQ_MAX_VSM_SIZE, CONST_NUMBER},
-#endif
-#ifdef ZMQ_MSG_SHARED
-  {"MSG_SHARED", NULL, ZMQ_MSG_SHARED, CONST_NUMBER},
-#endif
-#ifdef ZMQ_MULTICAST_HOPS
-  {"MULTICAST_HOPS", NULL, ZMQ_MULTICAST_HOPS, CONST_NUMBER},
+#ifdef ZMQ_EVENT_ACCEPTED
+  {"EVENT_ACCEPTED", NULL, ZMQ_EVENT_ACCEPTED, CONST_NUMBER},
 #endif
 #ifdef ZMQ_XSUB
   {"XSUB", NULL, ZMQ_XSUB, CONST_NUMBER},
 #endif
-#ifdef ZMQ_PAIR
-  {"PAIR", NULL, ZMQ_PAIR, CONST_NUMBER},
-#endif
-#ifdef ZMQ_MSG_MORE
-  {"MSG_MORE", NULL, ZMQ_MSG_MORE, CONST_NUMBER},
-#endif
-#ifdef ZMQ_STREAMER
-  {"STREAMER", NULL, ZMQ_STREAMER, CONST_NUMBER},
-#endif
-#ifdef ZMQ_MAXMSGSIZE
-  {"MAXMSGSIZE", NULL, ZMQ_MAXMSGSIZE, CONST_NUMBER},
+#ifdef ZMQ_MAX_VSM_SIZE
+  {"MAX_VSM_SIZE", NULL, ZMQ_MAX_VSM_SIZE, CONST_NUMBER},
 #endif
 #ifdef ZMQ_DEALER
   {"DEALER", NULL, ZMQ_DEALER, CONST_NUMBER},
@@ -7615,98 +9972,233 @@ static const obj_const zmq_constants[] = {
 #ifdef ZMQ_NOBLOCK
   {"NOBLOCK", NULL, ZMQ_NOBLOCK, CONST_NUMBER},
 #endif
-#ifdef ZMQ_RCVBUF
-  {"RCVBUF", NULL, ZMQ_RCVBUF, CONST_NUMBER},
-#endif
-#ifdef ZMQ_FORWARDER
-  {"FORWARDER", NULL, ZMQ_FORWARDER, CONST_NUMBER},
-#endif
 #ifdef ZMQ_RATE
   {"RATE", NULL, ZMQ_RATE, CONST_NUMBER},
 #endif
-#ifdef ZMQ_IDENTITY
-  {"IDENTITY", NULL, ZMQ_IDENTITY, CONST_NUMBER},
-#endif
-#ifdef ZMQ_PULL
-  {"PULL", NULL, ZMQ_PULL, CONST_NUMBER},
+#ifdef ZMQ_EVENT_CONNECT_RETRIED
+  {"EVENT_CONNECT_RETRIED", NULL, ZMQ_EVENT_CONNECT_RETRIED, CONST_NUMBER},
 #endif
 #ifdef ZMQ_IO_THREADS
   {"IO_THREADS", NULL, ZMQ_IO_THREADS, CONST_NUMBER},
 #endif
-#ifdef ZMQ_RCVHWM
-  {"RCVHWM", NULL, ZMQ_RCVHWM, CONST_NUMBER},
+#ifdef ZMQ_FD
+  {"FD", NULL, ZMQ_FD, CONST_NUMBER},
 #endif
-#ifdef ZMQ_SNDHWM
-  {"SNDHWM", NULL, ZMQ_SNDHWM, CONST_NUMBER},
-#endif
-#ifdef ZMQ_AFFINITY
-  {"AFFINITY", NULL, ZMQ_AFFINITY, CONST_NUMBER},
-#endif
-#ifdef ZMQ_SUB
-  {"SUB", NULL, ZMQ_SUB, CONST_NUMBER},
-#endif
-#ifdef ZMQ_UNSUBSCRIBE
-  {"UNSUBSCRIBE", NULL, ZMQ_UNSUBSCRIBE, CONST_NUMBER},
-#endif
-#ifdef ZMQ_PUSH
-  {"PUSH", NULL, ZMQ_PUSH, CONST_NUMBER},
-#endif
-#ifdef ZMQ_XREQ
-  {"XREQ", NULL, ZMQ_XREQ, CONST_NUMBER},
-#endif
-#ifdef ZMQ_RCVLABEL
-  {"RCVLABEL", NULL, ZMQ_RCVLABEL, CONST_NUMBER},
-#endif
-#ifdef ZMQ_PUB
-  {"PUB", NULL, ZMQ_PUB, CONST_NUMBER},
-#endif
-#ifdef ZMQ_DELIMITER
-  {"DELIMITER", NULL, ZMQ_DELIMITER, CONST_NUMBER},
+#ifdef ZMQ_TCP_KEEPALIVE_CNT
+  {"TCP_KEEPALIVE_CNT", NULL, ZMQ_TCP_KEEPALIVE_CNT, CONST_NUMBER},
 #endif
 #ifdef ZMQ_BACKLOG
   {"BACKLOG", NULL, ZMQ_BACKLOG, CONST_NUMBER},
 #endif
-#ifdef ZMQ_SNDMORE
-  {"SNDMORE", NULL, ZMQ_SNDMORE, CONST_NUMBER},
+#ifdef ZMQ_EVENT_MONITOR_STOPPED
+  {"EVENT_MONITOR_STOPPED", NULL, ZMQ_EVENT_MONITOR_STOPPED, CONST_NUMBER},
 #endif
-#ifdef ZMQ_EVENTS
-  {"EVENTS", NULL, ZMQ_EVENTS, CONST_NUMBER},
+#ifdef ZMQ_AFFINITY
+  {"AFFINITY", NULL, ZMQ_AFFINITY, CONST_NUMBER},
 #endif
-#ifdef ZMQ_SNDBUF
-  {"SNDBUF", NULL, ZMQ_SNDBUF, CONST_NUMBER},
+#ifdef ZMQ_IPV6
+  {"IPV6", NULL, ZMQ_IPV6, CONST_NUMBER},
 #endif
-#ifdef ZMQ_MAX_SOCKETS
-  {"MAX_SOCKETS", NULL, ZMQ_MAX_SOCKETS, CONST_NUMBER},
-#endif
-#ifdef ZMQ_POLLIN
-  {"POLLIN", NULL, ZMQ_POLLIN, CONST_NUMBER},
-#endif
-#ifdef ZMQ_FD
-  {"FD", NULL, ZMQ_FD, CONST_NUMBER},
-#endif
-#ifdef ZMQ_POLLERR
-  {"POLLERR", NULL, ZMQ_POLLERR, CONST_NUMBER},
-#endif
-#ifdef ZMQ_RCVTIMEO
-  {"RCVTIMEO", NULL, ZMQ_RCVTIMEO, CONST_NUMBER},
-#endif
-#ifdef ZMQ_SNDTIMEO
-  {"SNDTIMEO", NULL, ZMQ_SNDTIMEO, CONST_NUMBER},
-#endif
-#ifdef ZMQ_HWM
-  {"HWM", NULL, ZMQ_HWM, CONST_NUMBER},
-#endif
-#ifdef ZMQ_XPUB
-  {"XPUB", NULL, ZMQ_XPUB, CONST_NUMBER},
-#endif
-#ifdef ZMQ_REQ
-  {"REQ", NULL, ZMQ_REQ, CONST_NUMBER},
+#ifdef ZMQ_EVENT_ALL
+  {"EVENT_ALL", NULL, ZMQ_EVENT_ALL, CONST_NUMBER},
 #endif
 #ifdef ZMQ_RECONNECT_IVL_MAX
   {"RECONNECT_IVL_MAX", NULL, ZMQ_RECONNECT_IVL_MAX, CONST_NUMBER},
 #endif
+#ifdef ZMQ_SNDTIMEO
+  {"SNDTIMEO", NULL, ZMQ_SNDTIMEO, CONST_NUMBER},
+#endif
+#ifdef ZMQ_EVENT_CLOSED
+  {"EVENT_CLOSED", NULL, ZMQ_EVENT_CLOSED, CONST_NUMBER},
+#endif
+#ifdef ZMQ_REQ
+  {"REQ", NULL, ZMQ_REQ, CONST_NUMBER},
+#endif
+#ifdef ZMQ_PLAIN_PASSWORD
+  {"PLAIN_PASSWORD", NULL, ZMQ_PLAIN_PASSWORD, CONST_NUMBER},
+#endif
+#ifdef ZMQ_RCVLABEL
+  {"RCVLABEL", NULL, ZMQ_RCVLABEL, CONST_NUMBER},
+#endif
+#ifdef ZMQ_REQ_CORRELATE
+  {"REQ_CORRELATE", NULL, ZMQ_REQ_CORRELATE, CONST_NUMBER},
+#endif
+#ifdef ZMQ_XREP
+  {"XREP", NULL, ZMQ_XREP, CONST_NUMBER},
+#endif
+#ifdef ZMQ_XPUB
+  {"XPUB", NULL, ZMQ_XPUB, CONST_NUMBER},
+#endif
+#ifdef ZMQ_DONTWAIT
+  {"DONTWAIT", NULL, ZMQ_DONTWAIT, CONST_NUMBER},
+#endif
+#ifdef ZMQ_MSG_MORE
+  {"MSG_MORE", NULL, ZMQ_MSG_MORE, CONST_NUMBER},
+#endif
+#ifdef ZMQ_TCP_KEEPALIVE_INTVL
+  {"TCP_KEEPALIVE_INTVL", NULL, ZMQ_TCP_KEEPALIVE_INTVL, CONST_NUMBER},
+#endif
+#ifdef ZMQ_CURVE_SERVER
+  {"CURVE_SERVER", NULL, ZMQ_CURVE_SERVER, CONST_NUMBER},
+#endif
+#ifdef ZMQ_POLLERR
+  {"POLLERR", NULL, ZMQ_POLLERR, CONST_NUMBER},
+#endif
+#ifdef ZMQ_MCAST_LOOP
+  {"MCAST_LOOP", NULL, ZMQ_MCAST_LOOP, CONST_NUMBER},
+#endif
+#ifdef ZMQ_TYPE
+  {"TYPE", NULL, ZMQ_TYPE, CONST_NUMBER},
+#endif
+#ifdef ZMQ_RCVMORE
+  {"RCVMORE", NULL, ZMQ_RCVMORE, CONST_NUMBER},
+#endif
+#ifdef ZMQ_MAXMSGSIZE
+  {"MAXMSGSIZE", NULL, ZMQ_MAXMSGSIZE, CONST_NUMBER},
+#endif
+#ifdef ZMQ_PULL
+  {"PULL", NULL, ZMQ_PULL, CONST_NUMBER},
+#endif
+#ifdef ZMQ_PLAIN_SERVER
+  {"PLAIN_SERVER", NULL, ZMQ_PLAIN_SERVER, CONST_NUMBER},
+#endif
+#ifdef ZMQ_CURVE_SECRETKEY
+  {"CURVE_SECRETKEY", NULL, ZMQ_CURVE_SECRETKEY, CONST_NUMBER},
+#endif
+#ifdef ZMQ_EVENT_DISCONNECTED
+  {"EVENT_DISCONNECTED", NULL, ZMQ_EVENT_DISCONNECTED, CONST_NUMBER},
+#endif
+#ifdef ZMQ_PAIR
+  {"PAIR", NULL, ZMQ_PAIR, CONST_NUMBER},
+#endif
+#ifdef ZMQ_FORWARDER
+  {"FORWARDER", NULL, ZMQ_FORWARDER, CONST_NUMBER},
+#endif
+#ifdef ZMQ_IDENTITY
+  {"IDENTITY", NULL, ZMQ_IDENTITY, CONST_NUMBER},
+#endif
+#ifdef ZMQ_MSG_SHARED
+  {"MSG_SHARED", NULL, ZMQ_MSG_SHARED, CONST_NUMBER},
+#endif
+#ifdef ZMQ_MULTICAST_HOPS
+  {"MULTICAST_HOPS", NULL, ZMQ_MULTICAST_HOPS, CONST_NUMBER},
+#endif
+#ifdef ZMQ_EVENT_CONNECT_DELAYED
+  {"EVENT_CONNECT_DELAYED", NULL, ZMQ_EVENT_CONNECT_DELAYED, CONST_NUMBER},
+#endif
+#ifdef ZMQ_PUSH
+  {"PUSH", NULL, ZMQ_PUSH, CONST_NUMBER},
+#endif
+#ifdef ZMQ_SNDHWM
+  {"SNDHWM", NULL, ZMQ_SNDHWM, CONST_NUMBER},
+#endif
+#ifdef ZMQ_STREAMER
+  {"STREAMER", NULL, ZMQ_STREAMER, CONST_NUMBER},
+#endif
+#ifdef ZMQ_CURVE_PUBLICKEY
+  {"CURVE_PUBLICKEY", NULL, ZMQ_CURVE_PUBLICKEY, CONST_NUMBER},
+#endif
+#ifdef ZMQ_LAST_ENDPOINT
+  {"LAST_ENDPOINT", NULL, ZMQ_LAST_ENDPOINT, CONST_NUMBER},
+#endif
+#ifdef ZMQ_SWAP
+  {"SWAP", NULL, ZMQ_SWAP, CONST_NUMBER},
+#endif
+#ifdef ZMQ_ROUTER_MANDATORY
+  {"ROUTER_MANDATORY", NULL, ZMQ_ROUTER_MANDATORY, CONST_NUMBER},
+#endif
+#ifdef ZMQ_RCVBUF
+  {"RCVBUF", NULL, ZMQ_RCVBUF, CONST_NUMBER},
+#endif
+#ifdef ZMQ_EVENT_BIND_FAILED
+  {"EVENT_BIND_FAILED", NULL, ZMQ_EVENT_BIND_FAILED, CONST_NUMBER},
+#endif
+#ifdef ZMQ_ZAP_DOMAIN
+  {"ZAP_DOMAIN", NULL, ZMQ_ZAP_DOMAIN, CONST_NUMBER},
+#endif
+#ifdef ZMQ_PLAIN_USERNAME
+  {"PLAIN_USERNAME", NULL, ZMQ_PLAIN_USERNAME, CONST_NUMBER},
+#endif
+#ifdef ZMQ_EVENT_CLOSE_FAILED
+  {"EVENT_CLOSE_FAILED", NULL, ZMQ_EVENT_CLOSE_FAILED, CONST_NUMBER},
+#endif
+#ifdef ZMQ_RCVTIMEO
+  {"RCVTIMEO", NULL, ZMQ_RCVTIMEO, CONST_NUMBER},
+#endif
+#ifdef ZMQ_TCP_ACCEPT_FILTER
+  {"TCP_ACCEPT_FILTER", NULL, ZMQ_TCP_ACCEPT_FILTER, CONST_NUMBER},
+#endif
+#ifdef ZMQ_IMMEDIATE
+  {"IMMEDIATE", NULL, ZMQ_IMMEDIATE, CONST_NUMBER},
+#endif
+#ifdef ZMQ_VSM
+  {"VSM", NULL, ZMQ_VSM, CONST_NUMBER},
+#endif
+#ifdef ZMQ_EVENT_LISTENING
+  {"EVENT_LISTENING", NULL, ZMQ_EVENT_LISTENING, CONST_NUMBER},
+#endif
+#ifdef ZMQ_XPUB_VERBOSE
+  {"XPUB_VERBOSE", NULL, ZMQ_XPUB_VERBOSE, CONST_NUMBER},
+#endif
+#ifdef ZMQ_ROUTER_RAW
+  {"ROUTER_RAW", NULL, ZMQ_ROUTER_RAW, CONST_NUMBER},
+#endif
+#ifdef ZMQ_XREQ
+  {"XREQ", NULL, ZMQ_XREQ, CONST_NUMBER},
+#endif
+#ifdef ZMQ_SNDBUF
+  {"SNDBUF", NULL, ZMQ_SNDBUF, CONST_NUMBER},
+#endif
+#ifdef ZMQ_EVENT_ACCEPT_FAILED
+  {"EVENT_ACCEPT_FAILED", NULL, ZMQ_EVENT_ACCEPT_FAILED, CONST_NUMBER},
+#endif
+#ifdef ZMQ_DELIMITER
+  {"DELIMITER", NULL, ZMQ_DELIMITER, CONST_NUMBER},
+#endif
+#ifdef ZMQ_EVENTS
+  {"EVENTS", NULL, ZMQ_EVENTS, CONST_NUMBER},
+#endif
+#ifdef ZMQ_SNDMORE
+  {"SNDMORE", NULL, ZMQ_SNDMORE, CONST_NUMBER},
+#endif
+#ifdef ZMQ_PUB
+  {"PUB", NULL, ZMQ_PUB, CONST_NUMBER},
+#endif
+#ifdef ZMQ_RECOVERY_IVL
+  {"RECOVERY_IVL", NULL, ZMQ_RECOVERY_IVL, CONST_NUMBER},
+#endif
 #ifdef ZMQ_RECONNECT_IVL_MSEC
   {"RECONNECT_IVL_MSEC", NULL, ZMQ_RECONNECT_IVL_MSEC, CONST_NUMBER},
+#endif
+#ifdef ZMQ_POLLIN
+  {"POLLIN", NULL, ZMQ_POLLIN, CONST_NUMBER},
+#endif
+#ifdef ZMQ_CURVE
+  {"CURVE", NULL, ZMQ_CURVE, CONST_NUMBER},
+#endif
+#ifdef ZMQ_SUB
+  {"SUB", NULL, ZMQ_SUB, CONST_NUMBER},
+#endif
+#ifdef ZMQ_CURVE_SERVERKEY
+  {"CURVE_SERVERKEY", NULL, ZMQ_CURVE_SERVERKEY, CONST_NUMBER},
+#endif
+#ifdef ZMQ_CONFLATE
+  {"CONFLATE", NULL, ZMQ_CONFLATE, CONST_NUMBER},
+#endif
+#ifdef ZMQ_HWM
+  {"HWM", NULL, ZMQ_HWM, CONST_NUMBER},
+#endif
+#ifdef ZMQ_REQ_RELAXED
+  {"REQ_RELAXED", NULL, ZMQ_REQ_RELAXED, CONST_NUMBER},
+#endif
+#ifdef ZMQ_MAX_SOCKETS
+  {"MAX_SOCKETS", NULL, ZMQ_MAX_SOCKETS, CONST_NUMBER},
+#endif
+#ifdef ZMQ_UNSUBSCRIBE
+  {"UNSUBSCRIBE", NULL, ZMQ_UNSUBSCRIBE, CONST_NUMBER},
+#endif
+#ifdef ZMQ_TCP_KEEPALIVE_IDLE
+  {"TCP_KEEPALIVE_IDLE", NULL, ZMQ_TCP_KEEPALIVE_IDLE, CONST_NUMBER},
 #endif
 #ifdef ZMQ_SNDLABEL
   {"SNDLABEL", NULL, ZMQ_SNDLABEL, CONST_NUMBER},
@@ -7714,26 +10206,26 @@ static const obj_const zmq_constants[] = {
 #ifdef ZMQ_QUEUE
   {"QUEUE", NULL, ZMQ_QUEUE, CONST_NUMBER},
 #endif
-#ifdef ZMQ_VSM
-  {"VSM", NULL, ZMQ_VSM, CONST_NUMBER},
+#ifdef ZMQ_MECHANISM
+  {"MECHANISM", NULL, ZMQ_MECHANISM, CONST_NUMBER},
 #endif
-#ifdef ZMQ_SWAP
-  {"SWAP", NULL, ZMQ_SWAP, CONST_NUMBER},
+#ifdef ZMQ_TCP_KEEPALIVE
+  {"TCP_KEEPALIVE", NULL, ZMQ_TCP_KEEPALIVE, CONST_NUMBER},
 #endif
-#ifdef ZMQ_XREP
-  {"XREP", NULL, ZMQ_XREP, CONST_NUMBER},
+#ifdef ZMQ_NULL
+  {"NULL", NULL, ZMQ_NULL, CONST_NUMBER},
 #endif
 #ifdef ZMQ_SUBSCRIBE
   {"SUBSCRIBE", NULL, ZMQ_SUBSCRIBE, CONST_NUMBER},
 #endif
-#ifdef ZMQ_MCAST_LOOP
-  {"MCAST_LOOP", NULL, ZMQ_MCAST_LOOP, CONST_NUMBER},
+#ifdef ZMQ_PROBE_ROUTER
+  {"PROBE_ROUTER", NULL, ZMQ_PROBE_ROUTER, CONST_NUMBER},
 #endif
-#ifdef ZMQ_DONTWAIT
-  {"DONTWAIT", NULL, ZMQ_DONTWAIT, CONST_NUMBER},
+#ifdef ZMQ_RCVHWM
+  {"RCVHWM", NULL, ZMQ_RCVHWM, CONST_NUMBER},
 #endif
-#ifdef ZMQ_RECOVERY_IVL
-  {"RECOVERY_IVL", NULL, ZMQ_RECOVERY_IVL, CONST_NUMBER},
+#ifdef ZMQ_REP
+  {"REP", NULL, ZMQ_REP, CONST_NUMBER},
 #endif
 #ifdef ZMQ_RECONNECT_IVL
   {"RECONNECT_IVL", NULL, ZMQ_RECONNECT_IVL, CONST_NUMBER},
