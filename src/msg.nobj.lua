@@ -44,10 +44,7 @@ object "zmq_msg_t" {
 
 struct zmq_msg_t
 {
-	void *content;
-	unsigned char flags;
-	unsigned char vsm_size;
-	unsigned char vsm_data [30]; /* that '30' is from 'MAX_VSM_SIZE' */
+  unsigned char _ [64];
 };
 
 int zmq_msg_init (zmq_msg_t *msg);
