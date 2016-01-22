@@ -11,6 +11,7 @@ branches:
     - master
 
 compiler:
+  - clang
   - gcc
 
 before_install:
@@ -19,6 +20,11 @@ before_install:
     fi
 
 install: ./scripts/travis_install.sh
+
+before_script:
+  - mkdir build
+  - cd build
+  - cmake .. -DLUA_LIBRARIES=$LUA_LIBDIR -DLUA_INCLUDE_DIR=$LUA_INCDIR -DINSTALL_LMOD=$INSTALL_LMOD -DINSTALL_CMOD=$INSTALL_CMOD
 
 script: ./scripts/travis_build.sh
 

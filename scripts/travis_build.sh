@@ -1,7 +1,4 @@
 #### build using pre-generated bindings.
-mkdir build; cd build
-cmake .. -DLUA_LIBRARIES=$LUA_LIBDIR -DLUA_INCLUDE_DIR=$LUA_INCDIR
-  -DINSTALL_LMOD=$INSTALL_LMOD -DINSTALL_CMOD=$INSTALL_CMOD
 make
 sudo make install
 # Run tests.
