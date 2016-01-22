@@ -484,7 +484,7 @@ local VERSION_2_2 = false
 local VERSION_3_0 = false
 local VERSION_4_0 = false
 local zver = _M.version()
-if zver[1] == 3 then
+if zver[1] == 4 then
 	VERSION_2_0 = false
 	VERSION_4_0 = true
 elseif zver[1] == 3 then
