@@ -1,5 +1,8 @@
 ﻿language: c
 
+sudo: required
+dist: trusty
+
 env:
   matrix:
     - LUA=lua5.1 LIBLUA=liblua5.1-dev     LUA_INCDIR=/usr/include/lua5.1     LUA_LIB=lua5.1
