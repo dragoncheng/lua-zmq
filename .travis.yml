@@ -1,4 +1,4 @@
 ﻿language: ruby
 
-script: cmake
+script: mkdir build && cd build && cmake .. && make
 
