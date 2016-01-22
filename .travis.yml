@@ -3,33 +3,10 @@
 sudo: required
 dist: trusty
 
-env:
-  matrix:
-    - LUA=lua5.1 LIBLUA=liblua5.1-dev     LUA_INCDIR=/usr/include/lua5.1     LUA_LIB=lua5.1
-    - LUA=lua5.2 LIBLUA=liblua5.2-dev     LUA_INCDIR=/usr/include/lua5.2     LUA_LIB=lua5.2
-    - LUA=luajit LIBLUA=libluajit-5.1-dev LUA_INCDIR=/usr/include/luajit-2.0 LUA_LIB=luajit-5.1
-
-branches:
-  only:
-    - master
-
-compiler:
-  - clang
-  - gcc
-
-before_install:
-  - if [ $LUA = "luajit" ]; then sudo add-apt-repository ppa:mwild1/ppa -y && sudo apt-get update -y; fi
-
-install: ./scripts/travis_install.sh
-
 before_script:
   - mkdir build
   - cd build
-  - cmake .. -DLUA_LIBRARIES=$LUA_LIBDIR -DLUA_INCLUDE_DIR=$LUA_INCDIR -DINSTALL_LMOD=$INSTALL_LMOD -DINSTALL_CMOD=$INSTALL_CMOD
+  - cmake ..
 
-script: ./scripts/travis_build.sh
+script: make
 
-notifications:
-  email:
-    on_failure: always
-    on_success: change
