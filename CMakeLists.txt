@@ -13,8 +13,8 @@ set(INSTALL_LMOD ${CMAKE_INSTALL_PREFIX}/share/lua/5.1 CACHE PATH
 				"Directory to install Lua source modules (configure lua via LUA_PATH)")
 set(INSTALL_CMOD ${CMAKE_INSTALL_PREFIX}/lib/lua/5.1 CACHE PATH
 				"Directory to install Lua binary modules (configure lua via LUA_CPATH)")
-set(ZMQ_PATH "" CACHE PATH
-				"Directory to libzmq. (by default use pkg-config to detect path)")
+
+set(ZMQ_PATH "/usr/local" )
 
 set(COMMON_CFLAGS "${CFLAGS}")
 set(COMMON_LDFLAGS)

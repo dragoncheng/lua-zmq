@@ -5828,6 +5828,7 @@ typedef struct ZMQ_recv_event {
 int monitor_recv_event(ZMQ_Socket *s, zmq_msg_t *msg, int flags, ZMQ_recv_event *ev)
 {
 	int rc ;
+#if ZMQ_VERSION_MAJOR == 3
 	zmq_event_t event;
 
 	ev->event_id = 0;
@@ -5842,7 +5843,6 @@ int monitor_recv_event(ZMQ_Socket *s, zmq_msg_t *msg, int flags, ZMQ_recv_event 
 	if(rc < 0) {
 		return rc;
 	}
-#if ZMQ_VERSION_MAJOR == 3
 	if(zmq_msg_size(msg) != sizeof(event)) {
 		ev->err = "Invalid monitor event.  Wrong event size.";
 		return -1;
@@ -5901,22 +5901,41 @@ int monitor_recv_event(ZMQ_Socket *s, zmq_msg_t *msg, int flags, ZMQ_recv_event 
 		return -1;
 	}
 #else
-	if(zmq_msg_size(msg) != (sizeof(event.event) + sizeof(event.value))) {
-		ev->err = "Invalid monitor event.  Wrong event size.";
+	// if(zmq_msg_size(msg) != (sizeof(event.event) + sizeof(event.value))) {
+	// 	ev->err = "Invalid monitor event.  Wrong event size.";
+	// 	return -1;
+	// }
+	zmq_msg_t msg2;  //  address part
+	zmq_msg_init (&msg2);
+	
+	zmq_msg_init(msg);
+
+	/* recv binary event. */
+	rc = zmq_recvmsg(s, msg, flags);
+	if(rc < 0) {
+		return rc;
+	}
+	if(zmq_msg_more(msg) != 0) {
+		ev->err = "Invalid monitor event.  Has too many parts.";
 		return -1;
 	}
-	/* copy binary data to event struct */
+	rc = zmq_msg_recv (&msg2, s, 0);
+	if (rc == -1 && zmq_errno() == ETERM)
+	{
+		return -1;
+	}
 	const char* data = (char*)zmq_msg_data(msg);
-	memcpy(&(event.event), data, sizeof(event.event));
-	memcpy(&(event.value), data+sizeof(event.event), sizeof(event.value));
-	ev->event_id = event.event;
-	ev->value = event.value;
+	int event = *(uint16_t *) data;
+	int value = *(uint32_t *) (data + 2);
+
+	ev->event_id = event;
+	ev->value = value;
 
 	if(zmq_msg_more(msg) == 0) {
 		ev->err = "Invalid monitor event.  Missing address part.";
 		return -1;
 	}
-	ev->value = event.value;
+	ev->value = value;
 
 	/* recv address part */
 	rc = zmq_recvmsg(s, msg, flags);
