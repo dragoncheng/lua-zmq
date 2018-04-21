@@ -5901,6 +5901,9 @@ int monitor_recv_event(ZMQ_Socket *s, zmq_msg_t *msg, int flags, ZMQ_recv_event 
 		return -1;
 	}
 #else
+	char* data;
+	int event = 0;
+	int value = 0;
 	// if(zmq_msg_size(msg) != (sizeof(event.event) + sizeof(event.value))) {
 	// 	ev->err = "Invalid monitor event.  Wrong event size.";
 	// 	return -1;
@@ -5924,9 +5927,9 @@ int monitor_recv_event(ZMQ_Socket *s, zmq_msg_t *msg, int flags, ZMQ_recv_event 
 	{
 		return -1;
 	}
-	const char* data = (char*)zmq_msg_data(msg);
-	int event = *(uint16_t *) data;
-	int value = *(uint32_t *) (data + 2);
+	data = (char*)zmq_msg_data(msg);
+	event = *(uint16_t *) data;
+	value = *(uint32_t *) (data + 2);
 
 	ev->event_id = event;
 	ev->value = value;
@@ -5988,7 +5991,7 @@ static int poller_resize_items(ZMQ_Poller *poller, int len) {
 	return len;
 }
 
-void poller_init(ZMQ_Poller *poller, int length) {
+LUA_NOBJ_API void poller_init(ZMQ_Poller *poller, int length) {
 	poller->items = (zmq_pollitem_t *)calloc(length, sizeof(zmq_pollitem_t));
 	poller->next = -1;
 	poller->count = 0;
@@ -5996,7 +5999,7 @@ void poller_init(ZMQ_Poller *poller, int length) {
 	poller->free_list = -1;
 }
 
-void poller_cleanup(ZMQ_Poller *poller) {
+LUA_NOBJ_API void poller_cleanup(ZMQ_Poller *poller) {
 	free(poller->items);
 	poller->items = NULL;
 	poller->next = -1;
@@ -6005,7 +6008,7 @@ void poller_cleanup(ZMQ_Poller *poller) {
 	poller->free_list = -1;
 }
 
-int poller_find_sock_item(ZMQ_Poller *poller, ZMQ_Socket *sock) {
+LUA_NOBJ_API int poller_find_sock_item(ZMQ_Poller *poller, ZMQ_Socket *sock) {
 	zmq_pollitem_t *items;
 	int count;
 	int n;
@@ -6020,7 +6023,7 @@ int poller_find_sock_item(ZMQ_Poller *poller, ZMQ_Socket *sock) {
 	return -1;
 }
 
-int poller_find_fd_item(ZMQ_Poller *poller, socket_t fd) {
+LUA_NOBJ_API int poller_find_fd_item(ZMQ_Poller *poller, socket_t fd) {
 	zmq_pollitem_t *items;
 	int count;
 	int n;
@@ -6035,7 +6038,7 @@ int poller_find_fd_item(ZMQ_Poller *poller, socket_t fd) {
 	return -1;
 }
 
-void poller_remove_item(ZMQ_Poller *poller, int idx) {
+LUA_NOBJ_API void poller_remove_item(ZMQ_Poller *poller, int idx) {
 	zmq_pollitem_t *items;
 	int free_list;
 	int count;
@@ -6062,7 +6065,7 @@ void poller_remove_item(ZMQ_Poller *poller, int idx) {
 	items[idx].revents = 0;
 }
 
-int poller_get_free_item(ZMQ_Poller *poller) {
+LUA_NOBJ_API int poller_get_free_item(ZMQ_Poller *poller) {
 	zmq_pollitem_t *curr;
 	zmq_pollitem_t *next;
 	int count;
@@ -6138,7 +6141,7 @@ static int poller_compact_items(ZMQ_Poller *poller) {
 	return count;
 }
 
-int poller_poll(ZMQ_Poller *poller, long timeout) {
+LUA_NOBJ_API int poller_poll(ZMQ_Poller *poller, long timeout) {
 	int count;
 	/* remove free slots from items list. */
 	if(poller->free_list >= 0) {
@@ -6150,7 +6153,7 @@ int poller_poll(ZMQ_Poller *poller, long timeout) {
 	return zmq_poll(poller->items, count, timeout);
 }
 
-int poller_next_revents(ZMQ_Poller *poller, int *revents) {
+LUA_NOBJ_API int poller_next_revents(ZMQ_Poller *poller, int *revents) {
 	zmq_pollitem_t *items;
 	int count;
 	int idx;
@@ -6601,10 +6604,8 @@ static int ZMQ_Socket__setopt__meth(lua_State *L) {
   ZMQ_Socket * this1;
   uint32_t opt2;
   ZMQ_Error err1 = 0;
-  this1 = obj_type_ZMQ_Socket_check(L,1);
-  opt2 = luaL_checkinteger(L,2);
-	size_t val_len;
-	const void *val;
+  size_t val_len;
+  const void *val;
 
 #if VERSION_2_1 || VERSION_3_0 || VERSION_4_0
 	socket_t fd_val;
@@ -6613,6 +6614,9 @@ static int ZMQ_Socket__setopt__meth(lua_State *L) {
 	uint32_t uint32_val;
 	uint64_t uint64_val;
 	int64_t int64_val;
+
+	this1 = obj_type_ZMQ_Socket_check(L,1);
+    opt2 = luaL_checkinteger(L,2);
 
 #if VERSION_3_0 || VERSION_4_0
 	/* 3.0 backwards compatibility support for HWM. */
@@ -6687,8 +6691,6 @@ static int ZMQ_Socket__getopt__meth(lua_State *L) {
   ZMQ_Socket * this1;
   uint32_t opt2;
   ZMQ_Error err2 = 0;
-  this1 = obj_type_ZMQ_Socket_check(L,1);
-  opt2 = luaL_checkinteger(L,2);
 	size_t val_len;
 
 #if VERSION_2_1 || VERSION_3_0 || VERSION_4_0
@@ -6701,6 +6703,8 @@ static int ZMQ_Socket__getopt__meth(lua_State *L) {
 #define STR_MAX 255
 	char str_val[STR_MAX];
 
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  opt2 = luaL_checkinteger(L,2);
 	if(opt2 > MAX_OPTS) {
 		lua_pushnil(L);
 		lua_pushliteral(L, "Invalid socket option.");
@@ -6841,9 +6845,10 @@ static int ZMQ_Socket__recv__meth(lua_State *L) {
   size_t data_len1 = 0;
   const char * data1 = NULL;
   ZMQ_Error err2 = 0;
-  this1 = obj_type_ZMQ_Socket_check(L,1);
-  flags2 = luaL_optinteger(L,2,0);
 	zmq_msg_t msg;
+	
+	this1 = obj_type_ZMQ_Socket_check(L,1);
+	flags2 = luaL_optinteger(L,2,0);
 	/* initialize message */
 	err2 = zmq_msg_init(&msg);
 	if(0 == err2) {
@@ -6901,11 +6906,11 @@ static int ZMQ_Socket__recv_event__meth(lua_State *L) {
   size_t addr_len3 = 0;
   const char * addr3 = NULL;
   ZMQ_Error err4 = 0;
-  this1 = obj_type_ZMQ_Socket_check(L,1);
-  flags2 = luaL_optinteger(L,2,0);
 	zmq_msg_t msg;
 	ZMQ_recv_event event;
 
+  this1 = obj_type_ZMQ_Socket_check(L,1);
+  flags2 = luaL_optinteger(L,2,0);
 	/* receive monitor event */
 	err4 = monitor_recv_event(this1, &msg, flags2, &event);
 	if(err4 >= 0) {

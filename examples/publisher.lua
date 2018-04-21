@@ -19,14 +19,21 @@
 -- THE SOFTWARE.
 
 local zmq = require"zmq"
+local socket = require'socket'
 
 local ctx = zmq.init()
 local s = ctx:socket(zmq.PUB)
+ffi = require "ffi"
 
-s:bind("tcp://lo:5555")
+s:bind("tcp://*:5555")
 
 local msg_id = 1
 while true do
-	s:send(tostring(msg_id))
+	-- s:send(tostring(msg_id))
+ local buf=ffi.new('char[256]','this is a test')
+ local msg = zmq.zmq_msg_t.init_data('XX:this is a test')
+ s:send_msg(msg)
 	msg_id = msg_id + 1
+	print(msg_id)
+	socket.select(nil,nil,1)
 end
